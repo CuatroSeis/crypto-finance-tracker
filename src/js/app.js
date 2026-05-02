@@ -68,9 +68,8 @@ function initChart() {
 // ------------------------------------------------------------
 //  Actualizar gráfico con datos reales
 // ------------------------------------------------------------
-async function updateChart() {
-    const data = await getCoinHistory(state.chartCoin, state.chartDays)
-
+// Renderiza con datos ya disponibles (sin fetch)
+function updateChartWithData(data) {
     const labels = data.prices.map(([ts]) => {
     const d = new Date(ts)
     return state.chartDays <= 7
@@ -79,13 +78,15 @@ async function updateChart() {
     })
 
     const prices = data.prices.map(([, price]) => price)
-
-    state.chartInstance.data.labels             = labels
-    state.chartInstance.data.datasets[0].data   = prices
-    state.chartInstance.data.datasets[0].label  = state.chartCoin
+    state.chartInstance.data.labels           = labels
+    state.chartInstance.data.datasets[0].data = prices
     state.chartInstance.update()
 }
-
+// Fetcha y renderiza (usada cuando el usuario cambia coin o período)
+async function updateChart() {
+    const data = await getCoinHistory(state.chartCoin, state.chartDays)
+    updateChartWithData(data)
+}
 // ------------------------------------------------------------
 //  Actualizar convertidor
 // ------------------------------------------------------------
@@ -188,22 +189,29 @@ async function refreshPortfolio() {
 // ------------------------------------------------------------
 async function loadAll() {
     try {
-    const [globalData, coinsData] = await Promise.all([
+    // Todas las llamadas en paralelo
+    const [globalData, coinsData, historyData] = await Promise.all([
         getGlobalData(),
         getCoinsMarket(state.coins),
+        getCoinHistory(state.chartCoin, state.chartDays),
     ])
 
     renderGlobalStats(globalData)
     renderCoinList(coinsData)
-    await refreshPortfolio()
-    await updateChart()
-    await updateConverter()
+
+    // Actualizar gráfico con datos ya traídos (sin fetch extra)
+    updateChartWithData(historyData)
+
+    // Estas dos en paralelo también
+    await Promise.all([
+        refreshPortfolio(),
+        updateConverter(),
+    ])
 
     } catch (err) {
     console.error('Error cargando datos:', err)
     }
 }
-
 // ------------------------------------------------------------
 //  Event listeners
 // ------------------------------------------------------------
@@ -243,8 +251,8 @@ async function init() {
     bindEvents()
     await loadAll()
 
-  // Auto-refresh cada 60 segundos
-    setInterval(loadAll, 60_000)
+  // Auto-refresh cada 30 segundos
+    setInterval(loadAll, 30_000)
 }
 
 init()

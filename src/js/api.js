@@ -7,7 +7,7 @@ import { CG_API_KEY } from './config.js'
 // Utilidad interna: fetch con manejo de errores centralizado
 async function fetchJSON(endpoint) {
     const separator = endpoint.includes('?') ? '&' : '?'
-    const response  = await fetch(`${BASE_URL}${endpoint}${separator}x_cg_demo_api_key=${API_KEY}`)
+    const response  = await fetch(`${BASE_URL}${endpoint}${separator}x_cg_demo_api_key=${CG_API_KEY}`)
 
     if (!response.ok) {
     throw new Error(`API error ${response.status}: ${endpoint}`)
