@@ -2,10 +2,12 @@
 //  Toda llamada HTTP vive acá. El resto del app consume esto.
 
 const BASE_URL = 'https://api.coingecko.com/api/v3'
+import { CG_API_KEY } from './config.js'
 
 // Utilidad interna: fetch con manejo de errores centralizado
 async function fetchJSON(endpoint) {
-    const response = await fetch(`${BASE_URL}${endpoint}`)
+    const separator = endpoint.includes('?') ? '&' : '?'
+    const response  = await fetch(`${BASE_URL}${endpoint}${separator}x_cg_demo_api_key=${API_KEY}`)
 
     if (!response.ok) {
     throw new Error(`API error ${response.status}: ${endpoint}`)
