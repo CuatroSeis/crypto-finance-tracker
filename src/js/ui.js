@@ -142,3 +142,67 @@ export function renderConversion(amount, fromId, toCurrency, prices) {
     document.getElementById('conv-rate').textContent =
     `1 ${fromId.toUpperCase().slice(0,3)} = ${prefix}${price.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${toCurrency.toUpperCase()}`
 }
+
+// ------------------------------------------------------------
+//  Conversiones rápidas (vista Converter)
+// ------------------------------------------------------------
+export function renderQuickConversions(prices) {
+    const container = document.getElementById('conv-reference-table')
+    if (!container) return
+
+    const pairs = [
+    { from: 'bitcoin',  symbol: 'BTC', amount: 1    },
+    { from: 'bitcoin',  symbol: 'BTC', amount: 0.01 },
+    { from: 'ethereum', symbol: 'ETH', amount: 1    },
+    { from: 'ethereum', symbol: 'ETH', amount: 10   },
+    { from: 'solana',   symbol: 'SOL', amount: 1    },
+    { from: 'solana',   symbol: 'SOL', amount: 100  },
+    ]
+
+    container.innerHTML = pairs.map(p => {
+    const usd = (prices[p.from]?.usd || 0) * p.amount
+    const ars = (prices[p.from]?.ars || 0) * p.amount
+    return `
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr;
+                    padding:10px 0; border-bottom:1px solid var(--border);
+                    font-size:12px; align-items:center;">
+        <span style="color:var(--text-secondary);">${p.amount} ${p.symbol}</span>
+        <span style="color:var(--accent-blue);">${formatUSD(usd)}</span>
+        <span style="color:var(--text-muted);">ARS ${ars.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+        </div>
+    `
+    }).join('')
+}
+
+// ------------------------------------------------------------
+//  Grid de precios actuales (vista Converter)
+// ------------------------------------------------------------
+export function renderPricesGrid(prices) {
+    const container = document.getElementById('conv-prices-grid')
+    if (!container) return
+
+    const coins = [
+    { id: 'bitcoin',     symbol: 'BTC', name: 'Bitcoin'  },
+    { id: 'ethereum',    symbol: 'ETH', name: 'Ethereum' },
+    { id: 'solana',      symbol: 'SOL', name: 'Solana'   },
+    { id: 'binancecoin', symbol: 'BNB', name: 'BNB'      },
+    ]
+
+    container.innerHTML = coins.map(c => {
+    const usd = prices[c.id]?.usd || 0
+    const eur = prices[c.id]?.eur || 0
+    const meta = COIN_COLORS[c.id] || { color: '#9ca3af' }
+    return `
+        <div style="background:var(--bg-base); border:1px solid var(--border);
+                    border-radius:var(--radius-sm); padding:14px;">
+        <p style="font-size:11px; color:${meta.color}; font-weight:500; margin-bottom:8px;">
+            ${c.symbol}
+        </p>
+        <p style="font-size:16px; font-weight:600; color:var(--text-primary); margin-bottom:4px;">
+            ${formatUSD(usd)}
+        </p>
+        <p style="font-size:11px; color:var(--text-muted);">€${eur.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
+        </div>
+    `
+    }).join('')
+}

@@ -3,28 +3,31 @@
 // ============================================================
 
 import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
-import { renderGlobalStats, renderCoinList, renderPortfolio, renderConversion } from './ui.js'
+import { renderGlobalStats, renderCoinList, renderPortfolio, renderConversion, renderQuickConversions, renderPricesGrid } from './ui.js'
 import { initRouter, onEnter } from './router.js'
 
 // ------------------------------------------------------------
 //  Estado de la app
 // ------------------------------------------------------------
 const state = {
-    coins:        ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
-    chartCoin:    'bitcoin',
-    chartDays:    7,
-    holdings:     JSON.parse(localStorage.getItem('portfolio') || '[]'),
-    prices:       {},
+    coins:         ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
+    chartCoin:     'bitcoin',
+    chartDays:     7,
+    holdings:      JSON.parse(localStorage.getItem('portfolio') || '[]'),
+    prices:        {},
     chartInstance: null,
+    chartReady:    false,
 }
 
 // ------------------------------------------------------------
-//  Inicializar gráfico vacío con Chart.js
+//  Chart.js — se inicializa solo cuando el canvas es visible
 // ------------------------------------------------------------
 function initChart() {
-    const ctx = document.getElementById('price-chart').getContext('2d')
+    if (state.chartReady) return
+    const canvas = document.getElementById('price-chart')
+    if (!canvas) return
 
-    state.chartInstance = new Chart(ctx, {
+    state.chartInstance = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
         labels:   [],
@@ -52,25 +55,31 @@ function initChart() {
         },
         scales: {
         x: {
-            ticks:  { color: '#4b5563', maxTicksLimit: 6, font: { size: 11 } },
-            grid:   { color: '#1e1e3a' },
+            ticks: { color: '#4b5563', maxTicksLimit: 6, font: { size: 11 } },
+            grid:  { color: '#1e1e3a' },
         },
         y: {
-            ticks:  { color: '#4b5563', font: { size: 11 },
-                    callback: v => `$${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}` },
-            grid:   { color: '#1e1e3a' },
+            ticks: {
+            color: '#4b5563',
+            font:  { size: 11 },
+            callback: v => `$${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+            },
+            grid:     { color: '#1e1e3a' },
             position: 'right',
         }
-        }
+        } 
     }
     })
+
+    state.chartReady = true
 }
 
 // ------------------------------------------------------------
-//  Actualizar gráfico con datos reales
+//  Gráfico
 // ------------------------------------------------------------
-// Renderiza con datos ya disponibles (sin fetch)
 function updateChartWithData(data) {
+    if (!state.chartInstance) return
+
     const labels = data.prices.map(([ts]) => {
     const d = new Date(ts)
     return state.chartDays <= 7
@@ -78,38 +87,87 @@ function updateChartWithData(data) {
         : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
     })
 
-    const prices = data.prices.map(([, price]) => price)
     state.chartInstance.data.labels           = labels
-    state.chartInstance.data.datasets[0].data = prices
+    state.chartInstance.data.datasets[0].data = data.prices.map(([, p]) => p)
     state.chartInstance.update()
 }
-// Fetcha y renderiza (usada cuando el usuario cambia coin o período)
+
 async function updateChart() {
     const data = await getCoinHistory(state.chartCoin, state.chartDays)
     updateChartWithData(data)
 }
+
 // ------------------------------------------------------------
-//  Actualizar convertidor
+//  Convertidor rápido (widget del dashboard)
 // ------------------------------------------------------------
 async function updateConverter() {
-    const amount = parseFloat(document.getElementById('conv-amount').value) || 1
-    const fromId = document.getElementById('conv-from').value
-    const toId   = document.getElementById('conv-to').value
+    const amountEl = document.getElementById('conv-amount')
+    const fromEl   = document.getElementById('conv-from')
+    const toEl     = document.getElementById('conv-to')
+    if (!amountEl || !fromEl || !toEl) return
+
+    const amount = parseFloat(amountEl.value) || 1
+    const fromId = fromEl.value
+    const toId   = toEl.value
 
     const prices = await getSimplePrices([fromId], ['usd', 'eur', 'ars'])
     renderConversion(amount, fromId, toId, prices)
 }
 
 // ------------------------------------------------------------
-//  Guardar portfolio en localStorage
+//  Convertidor completo (vista Converter)
+// ------------------------------------------------------------
+async function updateFullConverter() {
+    const amountEl = document.getElementById('conv-full-amount')
+    const fromEl   = document.getElementById('conv-full-from')
+    const toEl     = document.getElementById('conv-full-to')
+    if (!amountEl || !fromEl || !toEl) return
+
+    const amount   = parseFloat(amountEl.value) || 1
+    const fromId   = fromEl.value
+    const toId     = toEl.value
+    const isCrypto = id => ['bitcoin', 'ethereum', 'solana', 'binancecoin'].includes(id)
+
+    const coinIds    = [fromId, toId].filter(isCrypto)
+    const currencies = [fromId, toId].filter(id => !isCrypto(id))
+    if (!currencies.length) currencies.push('usd')
+
+    const prices = await getSimplePrices(coinIds, currencies)
+
+    let result
+    if (isCrypto(fromId) && !isCrypto(toId)) {
+    result = amount * (prices[fromId]?.[toId] || 0)
+    } else if (!isCrypto(fromId) && isCrypto(toId)) {
+    result = amount / (prices[toId]?.usd || 1)
+    } else if (isCrypto(fromId) && isCrypto(toId)) {
+    result = amount * ((prices[fromId]?.usd || 0) / (prices[toId]?.usd || 1))
+    } else {
+    result = amount
+    }
+
+    const resultEl = document.getElementById('conv-full-result')
+    const rateEl   = document.getElementById('conv-full-rate')
+    if (resultEl) resultEl.textContent = result.toLocaleString('en-US', { maximumFractionDigits: 6 })
+    if (rateEl)   rateEl.textContent   = `1 ${fromId} = ${(result / amount).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${toId}`
+}
+
+// ------------------------------------------------------------
+//  Portfolio
 // ------------------------------------------------------------
 function savePortfolio() {
     localStorage.setItem('portfolio', JSON.stringify(state.holdings))
 }
 
-// ------------------------------------------------------------
-//  Modal simple para agregar activo al portfolio
-// ------------------------------------------------------------
+async function refreshPortfolio() {
+    if (state.holdings.length === 0) {
+    renderPortfolio([], {}, state)
+    return
+    }
+    const ids    = state.holdings.map(h => h.coinId)
+    const prices = await getSimplePrices(ids, ['usd'])
+    renderPortfolio(state.holdings, prices, state)
+}
+
 function openAddAssetModal() {
     const existing = document.getElementById('add-asset-modal')
     if (existing) { existing.remove(); return }
@@ -117,17 +175,21 @@ function openAddAssetModal() {
     const modal = document.createElement('div')
     modal.id = 'add-asset-modal'
     modal.style.cssText = `
-    position:fixed; inset:0; background:rgba(0,0,0,0.7);
+    position:fixed; inset:0; background:rgba(0,0,0,0.75);
     display:flex; align-items:center; justify-content:center; z-index:999;
     `
     modal.innerHTML = `
     <div style="background:#13132a; border:1px solid #2a2a4a; border-radius:14px;
-                padding:28px; width:320px; display:flex; flex-direction:column; gap:14px;">
+                padding:28px; width:340px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
         <h3 style="color:#a78bfa; font-size:13px; text-transform:uppercase; letter-spacing:0.8px">
-        Agregar activo
+            Agregar activo
         </h3>
-        <select id="modal-coin" style="background:#0a0a15; border:1px solid #2a2a4a;
-                color:#f1f5f9; padding:10px; border-radius:6px; font-size:13px;">
+        <span id="modal-close" style="color:#4b5563; cursor:pointer; font-size:18px; line-height:1;">✕</span>
+        </div>
+        <select id="modal-coin"
+        style="background:#0a0a15; border:1px solid #2a2a4a; color:#f1f5f9;
+                padding:10px; border-radius:6px; font-size:13px;">
         <option value="bitcoin|BTC">Bitcoin (BTC)</option>
         <option value="ethereum|ETH">Ethereum (ETH)</option>
         <option value="solana|SOL">Solana (SOL)</option>
@@ -137,60 +199,69 @@ function openAddAssetModal() {
                 min="0" step="any"
                 style="background:#0a0a15; border:1px solid #2a2a4a; color:#f1f5f9;
                     padding:10px; border-radius:6px; font-size:13px;" />
+        <input id="modal-buy-price" type="number" placeholder="Precio de compra en USD (ej: 40000)"
+                min="0" step="any"
+                style="background:#0a0a15; border:1px solid #2a2a4a; color:#f1f5f9;
+                    padding:10px; border-radius:6px; font-size:13px;" />
+        <p id="modal-error" style="color:#f87171; font-size:12px; display:none;">
+        Completá todos los campos correctamente.
+        </p>
         <div style="display:flex; gap:10px;">
-        <button id="modal-cancel" style="flex:1; padding:10px; border-radius:6px;
-                background:transparent; border:1px solid #2a2a4a; color:#9ca3af;
-                cursor:pointer; font-size:13px;">Cancelar</button>
-        <button id="modal-save" style="flex:1; padding:10px; border-radius:6px;
-                background:#a78bfa; border:none; color:#0a0a15;
-                cursor:pointer; font-size:13px; font-weight:600;">Agregar</button>
+        <button id="modal-cancel"
+            style="flex:1; padding:10px; border-radius:6px; background:transparent;
+                    border:1px solid #2a2a4a; color:#9ca3af; cursor:pointer; font-size:13px;">
+            Cancelar
+        </button>
+        <button id="modal-save"
+            style="flex:1; padding:10px; border-radius:6px; background:#a78bfa;
+                    border:none; color:#0a0a15; cursor:pointer; font-size:13px; font-weight:600;">
+            Agregar
+        </button>
         </div>
     </div>
     `
 
     document.body.appendChild(modal)
 
-    document.getElementById('modal-cancel').onclick = () => modal.remove()
+    const close = () => modal.remove()
+    document.getElementById('modal-close').onclick  = close
+    document.getElementById('modal-cancel').onclick = close
+    modal.addEventListener('click', e => { if (e.target === modal) close() })
 
     document.getElementById('modal-save').onclick = async () => {
     const [coinId, symbol] = document.getElementById('modal-coin').value.split('|')
-    const amount = parseFloat(document.getElementById('modal-amount').value)
+    const amount    = parseFloat(document.getElementById('modal-amount').value)
+    const buyPrice  = parseFloat(document.getElementById('modal-buy-price').value)
+    const errorEl   = document.getElementById('modal-error')
 
-    if (!amount || amount <= 0) return
+    if (!amount || amount <= 0 || !buyPrice || buyPrice <= 0) {
+        errorEl.style.display = 'block'
+        return
+    }
 
-    // Buscar si ya existe
     const existing = state.holdings.find(h => h.coinId === coinId)
     if (existing) {
-        existing.amount += amount
+        const total        = existing.amount + amount
+      existing.buyPrice  = (existing.buyPrice * existing.amount + buyPrice * amount) / total
+        existing.amount    = total
     } else {
-        state.holdings.push({ coinId, symbol, amount })
+        state.holdings.push({ coinId, symbol, amount, buyPrice })
     }
 
     savePortfolio()
-    modal.remove()
+    close()
     await refreshPortfolio()
-    }
+    } 
 }
 
 // ------------------------------------------------------------
-//  Refresh portfolio (trae precios frescos)
+//  Vista Dashboard — carga datos globales
 // ------------------------------------------------------------
-async function refreshPortfolio() {
-    if (state.holdings.length === 0) {
-    renderPortfolio([], {})
-    return
-    }
-    const ids    = state.holdings.map(h => h.coinId)
-    const prices = await getSimplePrices(ids, ['usd'])
-    renderPortfolio(state.holdings, prices)
-}
-
-// ------------------------------------------------------------
-//  Carga inicial de todos los datos
-// ------------------------------------------------------------
-async function loadAll() {
+async function loadDashboard() {
     try {
-    // Todas las llamadas en paralelo
+    // Inicializar chart acá, cuando el canvas YA es visible
+    initChart()
+
     const [globalData, coinsData, historyData] = await Promise.all([
         getGlobalData(),
         getCoinsMarket(state.coins),
@@ -199,57 +270,72 @@ async function loadAll() {
 
     renderGlobalStats(globalData)
     renderCoinList(coinsData)
-
-    // Actualizar gráfico con datos ya traídos (sin fetch extra)
     updateChartWithData(historyData)
 
-    // Estas dos en paralelo también
     await Promise.all([
         refreshPortfolio(),
         updateConverter(),
     ])
 
     } catch (err) {
-    console.error('Error cargando datos:', err)
+    console.error('Error cargando dashboard:', err)
     }
 }
+
 // ------------------------------------------------------------
-//  Event listeners
+//  Vista Converter — carga precios y tabla de referencia
+// ------------------------------------------------------------
+async function loadConverterView() {
+    try {
+    const prices = await getSimplePrices(
+        ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
+        ['usd', 'eur', 'ars']
+    )
+    renderQuickConversions(prices)
+    renderPricesGrid(prices)
+    await updateFullConverter()
+    } catch (err) {
+    console.error('Error cargando converter:', err)
+    }
+}
+
+// ------------------------------------------------------------
+//  Event listeners — se bindean una sola vez al inicio
 // ------------------------------------------------------------
 function bindEvents() {
-  // Botones de período del gráfico
-    document.querySelectorAll('.btn-period').forEach(btn => {
-    btn.addEventListener('click', async () => {
-        document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'))
-        btn.classList.add('active')
-        state.chartDays = Number(btn.dataset.days)
-        await updateChart()
-    })
-    })
-
-  // Selector de coin del gráfico
-    document.getElementById('chart-coin-select').addEventListener('change', async (e) => {
-    state.chartCoin = e.target.value
+  // Delegación global para botones de período del chart
+    document.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-period')
+    if (!btn) return
+    document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    state.chartDays = Number(btn.dataset.days)
     await updateChart()
     })
 
-  // Convertidor
-    const convInputs = ['conv-amount', 'conv-from', 'conv-to']
-    convInputs.forEach(id => {
-    document.getElementById(id).addEventListener('change', updateConverter)
+  // Selector de coin del chart
+    document.addEventListener('change', async e => {
+    if (e.target.id === 'chart-coin-select') {
+        state.chartCoin = e.target.value
+        await updateChart()
+    }
     })
-    document.getElementById('conv-amount').addEventListener('input', updateConverter)
 
-  // Botón agregar activo
-    document.getElementById('btn-add-asset').addEventListener('click', openAddAssetModal)
+  // Convertidor rápido (dashboard)
+    document.addEventListener('input',  e => { if (['conv-amount'].includes(e.target.id)) updateConverter() })
+    document.addEventListener('change', e => { if (['conv-from', 'conv-to'].includes(e.target.id)) updateConverter() })
 
-      // Converter completo
-    document.getElementById('conv-full-amount')?.addEventListener('input',  updateFullConverter)
-    document.getElementById('conv-full-from')?.addEventListener('change',   updateFullConverter)
-    document.getElementById('conv-full-to')?.addEventListener('change',     updateFullConverter)
+  // Convertidor completo (vista converter)
+    document.addEventListener('input',  e => { if (e.target.id === 'conv-full-amount') updateFullConverter() })
+    document.addEventListener('change', e => {
+    if (['conv-full-from', 'conv-full-to'].includes(e.target.id)) updateFullConverter() }   
+})
 
-  // Botón swap
-    document.getElementById('btn-swap')?.addEventListener('click', () => {
+
+
+  // Swap button
+    document.addEventListener('click', e => {
+    if (!e.target.closest('#btn-swap')) return
     const fromEl = document.getElementById('conv-full-from')
     const toEl   = document.getElementById('conv-full-to')
     const temp   = fromEl.value
@@ -257,85 +343,42 @@ function bindEvents() {
     toEl.value   = temp
     updateFullConverter()
     })
+
+  // Agregar activo — delegación porque el botón está en vista oculta al inicio
+    document.addEventListener('click', e => {
+    if (e.target.closest('#btn-add-asset')) openAddAssetModal()
+    })
+
+  // Eliminar activo del portfolio
+    document.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-remove-asset')
+    if (!btn) return
+    state.holdings = state.holdings.filter(h => h.coinId !== btn.dataset.coin)
+    savePortfolio()
+    await refreshPortfolio()
+    })
 }
 
 // ------------------------------------------------------------
-//  Arrancar la app
+//  Init
 // ------------------------------------------------------------
 async function init() {
-    initRouter()
-    initChart()
+  // 1. Bindear eventos primero (delegación global, no dependen del DOM visible)
     bindEvents()
 
-  // Al entrar al dashboard → cargar datos globales
-    onEnter('dashboard', async () => {
-    await loadAll()
-    })
+  // 2. Iniciar router — define qué vista se muestra
+    initRouter()
 
-  // Al entrar al portfolio → refrescar precios
-    onEnter('portfolio', async () => {
-    await refreshPortfolio()
-    })
+  // 3. Callbacks por vista
+    onEnter('dashboard', loadDashboard)
+    onEnter('portfolio', refreshPortfolio)
+    onEnter('converter', loadConverterView)
 
-  // Al entrar al converter → cargar convertidor completo
-    onEnter('converter', async () => {
-    await loadConverterView()
-    })
-
-  // Carga inicial
-    await loadAll()
-
-  // Auto-refresh cada 60 segundos solo si estamos en dashboard
+  // 4. Auto-refresh cada 60s solo en dashboard
     setInterval(() => {
     const active = document.querySelector('.view.active')?.id
-    if (active === 'view-dashboard') loadAll()
+    if (active === 'view-dashboard') loadDashboard()
     }, 60_000)
 }
 
-// funcion loadConverterView para cargar datos necesarios al entrar a la vista del convertidor
-async function loadConverterView() {
-    const prices = await getSimplePrices(
-    ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
-    ['usd', 'eur', 'ars']
-    )
-
-    renderQuickConversions(prices)
-    renderPricesGrid(prices)
-    updateFullConverter()
-}
-
-async function updateFullConverter() {
-    const amount = parseFloat(document.getElementById('conv-full-amount')?.value) || 1
-    const fromId = document.getElementById('conv-full-from')?.value
-    const toId   = document.getElementById('conv-full-to')?.value
-
-    if (!fromId || !toId) return
-
-    const isCrypto = id => ['bitcoin','ethereum','solana','binancecoin'].includes(id)
-
-    const coinIds    = [fromId, toId].filter(isCrypto)
-    const currencies = [fromId, toId].filter(id => !isCrypto(id))
-    if (!currencies.length) currencies.push('usd')
-
-    const prices = await getSimplePrices(coinIds, currencies)
-
-  // Calcular resultado
-    let result
-    if (isCrypto(fromId) && !isCrypto(toId)) {
-    result = amount * (prices[fromId]?.[toId] || 0)
-    } else if (!isCrypto(fromId) && isCrypto(toId)) {
-    const rate = prices[toId]?.usd || 1
-    result = amount / rate
-    } else if (isCrypto(fromId) && isCrypto(toId)) {
-    const fromUSD = prices[fromId]?.usd || 0
-    const toUSD   = prices[toId]?.usd   || 1
-    result = amount * (fromUSD / toUSD)
-    } else {
-    result = amount
-    }
-
-    const resultEl = document.getElementById('conv-full-result')
-    const rateEl   = document.getElementById('conv-full-rate')
-    if (resultEl) resultEl.textContent = result.toLocaleString('en-US', { maximumFractionDigits: 6 })
-    if (rateEl)   rateEl.textContent   = `${amount} ${fromId} = ${result.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${toId}`
-}
+init()
