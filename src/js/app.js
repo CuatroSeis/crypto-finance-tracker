@@ -4,6 +4,7 @@
 
 import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
 import { renderGlobalStats, renderCoinList, renderPortfolio, renderConversion } from './ui.js'
+import { initRouter, onEnter } from './router.js'
 
 // ------------------------------------------------------------
 //  Estado de la app
@@ -241,18 +242,100 @@ function bindEvents() {
 
   // Botón agregar activo
     document.getElementById('btn-add-asset').addEventListener('click', openAddAssetModal)
+
+      // Converter completo
+    document.getElementById('conv-full-amount')?.addEventListener('input',  updateFullConverter)
+    document.getElementById('conv-full-from')?.addEventListener('change',   updateFullConverter)
+    document.getElementById('conv-full-to')?.addEventListener('change',     updateFullConverter)
+
+  // Botón swap
+    document.getElementById('btn-swap')?.addEventListener('click', () => {
+    const fromEl = document.getElementById('conv-full-from')
+    const toEl   = document.getElementById('conv-full-to')
+    const temp   = fromEl.value
+    fromEl.value = toEl.value
+    toEl.value   = temp
+    updateFullConverter()
+    })
 }
 
 // ------------------------------------------------------------
 //  Arrancar la app
 // ------------------------------------------------------------
 async function init() {
+    initRouter()
     initChart()
     bindEvents()
+
+  // Al entrar al dashboard → cargar datos globales
+    onEnter('dashboard', async () => {
+    await loadAll()
+    })
+
+  // Al entrar al portfolio → refrescar precios
+    onEnter('portfolio', async () => {
+    await refreshPortfolio()
+    })
+
+  // Al entrar al converter → cargar convertidor completo
+    onEnter('converter', async () => {
+    await loadConverterView()
+    })
+
+  // Carga inicial
     await loadAll()
 
-  // Auto-refresh cada 30 segundos
-    setInterval(loadAll, 30_000)
+  // Auto-refresh cada 60 segundos solo si estamos en dashboard
+    setInterval(() => {
+    const active = document.querySelector('.view.active')?.id
+    if (active === 'view-dashboard') loadAll()
+    }, 60_000)
 }
 
-init()
+// funcion loadConverterView para cargar datos necesarios al entrar a la vista del convertidor
+async function loadConverterView() {
+    const prices = await getSimplePrices(
+    ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
+    ['usd', 'eur', 'ars']
+    )
+
+    renderQuickConversions(prices)
+    renderPricesGrid(prices)
+    updateFullConverter()
+}
+
+async function updateFullConverter() {
+    const amount = parseFloat(document.getElementById('conv-full-amount')?.value) || 1
+    const fromId = document.getElementById('conv-full-from')?.value
+    const toId   = document.getElementById('conv-full-to')?.value
+
+    if (!fromId || !toId) return
+
+    const isCrypto = id => ['bitcoin','ethereum','solana','binancecoin'].includes(id)
+
+    const coinIds    = [fromId, toId].filter(isCrypto)
+    const currencies = [fromId, toId].filter(id => !isCrypto(id))
+    if (!currencies.length) currencies.push('usd')
+
+    const prices = await getSimplePrices(coinIds, currencies)
+
+  // Calcular resultado
+    let result
+    if (isCrypto(fromId) && !isCrypto(toId)) {
+    result = amount * (prices[fromId]?.[toId] || 0)
+    } else if (!isCrypto(fromId) && isCrypto(toId)) {
+    const rate = prices[toId]?.usd || 1
+    result = amount / rate
+    } else if (isCrypto(fromId) && isCrypto(toId)) {
+    const fromUSD = prices[fromId]?.usd || 0
+    const toUSD   = prices[toId]?.usd   || 1
+    result = amount * (fromUSD / toUSD)
+    } else {
+    result = amount
+    }
+
+    const resultEl = document.getElementById('conv-full-result')
+    const rateEl   = document.getElementById('conv-full-rate')
+    if (resultEl) resultEl.textContent = result.toLocaleString('en-US', { maximumFractionDigits: 6 })
+    if (rateEl)   rateEl.textContent   = `${amount} ${fromId} = ${result.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${toId}`
+}
