@@ -206,3 +206,56 @@ export function renderPricesGrid(prices) {
     `
     }).join('')
 }
+
+export function renderPortfolioSummary(holdings, prices) {
+    const container = document.getElementById('portfolio-summary')
+    if (!container) return
+
+    if (holdings.length === 0) {
+    container.innerHTML = `
+        <p style="font-size:12px; color:var(--text-muted); text-align:center; padding:16px 0;">
+        Sin activos. Agregá uno en la vista Portfolio.
+        </p>`
+    document.getElementById('portfolio-total').textContent  = '$0.00'
+    document.getElementById('portfolio-change').textContent = '—'
+    return
+    }
+
+    let totalValue    = 0
+    let totalInvested = 0
+
+    holdings.forEach(h => {
+    const price    = prices[h.coinId]?.usd || 0
+    totalValue    += price * h.amount
+    totalInvested += (h.buyPrice || 0) * h.amount
+    })
+
+    const pnl    = totalValue - totalInvested
+    const pnlPct = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0
+    const isUp   = pnl >= 0
+
+    document.getElementById('portfolio-total').textContent = formatUSD(totalValue)
+    const changeEl = document.getElementById('portfolio-change')
+    changeEl.textContent = `${isUp ? '▲' : '▼'} ${formatUSD(Math.abs(pnl))} (${Math.abs(pnlPct).toFixed(2)}%)`
+    changeEl.className   = 'stat-change ' + (isUp ? 'up' : 'down')
+
+    container.innerHTML = holdings.map(h => {
+    const meta  = COIN_COLORS[h.coinId] || { color: '#9ca3af' }
+    const price = prices[h.coinId]?.usd || 0
+    const value = price * h.amount
+    const pct   = totalValue > 0 ? (value / totalValue) * 100 : 0
+    return `
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    padding:8px 0; border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:12px; font-weight:500; color:${meta.color};">${h.symbol}</span>
+            <span style="font-size:11px; color:var(--text-muted);">${h.amount}</span>
+        </div>
+        <div style="text-align:right;">
+            <p style="font-size:12px; font-weight:500; color:var(--text-primary);">${formatUSD(value)}</p>
+            <p style="font-size:10px; color:var(--text-muted);">${pct.toFixed(1)}%</p>
+        </div>
+        </div>
+    `
+    }).join('')
+}

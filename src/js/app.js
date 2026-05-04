@@ -3,8 +3,9 @@
 // ============================================================
 
 import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
-import { renderGlobalStats, renderCoinList, renderPortfolio, renderConversion, renderQuickConversions, renderPricesGrid } from './ui.js'
 import { initRouter, onEnter } from './router.js'
+// Agregar al import de ui.js
+import { renderGlobalStats, renderCoinList, renderPortfolio, renderPortfolioSummary, renderConversion, renderQuickConversions, renderPricesGrid } from './ui.js'
 
 // ------------------------------------------------------------
 //  Estado de la app
@@ -273,7 +274,7 @@ async function loadDashboard() {
     updateChartWithData(historyData)
 
     await Promise.all([
-        refreshPortfolio(),
+        renderPortfolioSummary(state.holdings, prices),
         updateConverter(),
     ])
 
@@ -328,8 +329,8 @@ function bindEvents() {
   // Convertidor completo (vista converter)
     document.addEventListener('input',  e => { if (e.target.id === 'conv-full-amount') updateFullConverter() })
     document.addEventListener('change', e => {
-    if (['conv-full-from', 'conv-full-to'].includes(e.target.id)) updateFullConverter() }   
-})
+    if (['conv-full-from', 'conv-full-to'].includes(e.target.id)) updateFullConverter() })   
+}
 
 
 
@@ -357,7 +358,7 @@ function bindEvents() {
     savePortfolio()
     await refreshPortfolio()
     })
-}
+
 
 // ------------------------------------------------------------
 //  Init
