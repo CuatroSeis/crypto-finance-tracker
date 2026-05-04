@@ -5,8 +5,7 @@
 import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
 import { initRouter, onEnter } from './router.js'
 // Agregar al import de ui.js
-import { renderGlobalStats, renderCoinList, renderPortfolio, 
-renderPortfolioSummary, renderConversion, renderQuickConversions, renderPricesGrid, showStatCardSkeletons, showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, restoreChart, showToast,
+import { renderGlobalStats,renderCoinList,renderPortfolio,renderPortfolioSummary,renderConversion,renderQuickConversions,renderPricesGrid,showStatCardSkeletons,showCoinListSkeleton,showChartSkeleton,showPortfolioSkeleton,showToast,
 } from './ui.js'
 
 // ------------------------------------------------------------
@@ -270,7 +269,6 @@ async function loadDashboard() {
     showPortfolioSkeleton()
 
     // 2. Restaurar canvas antes de init (skeleton lo reemplazó)
-    restoreChart()
     initChart()
 
     // 3. Fetch en paralelo
