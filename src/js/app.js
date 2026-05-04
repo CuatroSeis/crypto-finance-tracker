@@ -5,7 +5,9 @@
 import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
 import { initRouter, onEnter } from './router.js'
 // Agregar al import de ui.js
-import { renderGlobalStats, renderCoinList, renderPortfolio, renderPortfolioSummary, renderConversion, renderQuickConversions, renderPricesGrid } from './ui.js'
+import { renderGlobalStats, renderCoinList, renderPortfolio, 
+renderPortfolioSummary, renderConversion, renderQuickConversions, renderPricesGrid, showStatCardSkeletons, showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, restoreChart,
+} from './ui.js'
 
 // ------------------------------------------------------------
 //  Estado de la app

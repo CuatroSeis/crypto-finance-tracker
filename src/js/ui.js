@@ -12,6 +12,71 @@ const COIN_COLORS = {
 }
 
 // ------------------------------------------------------------
+//  Skeletons — muestran mientras cargan los datos reales
+// ------------------------------------------------------------
+export function showStatCardSkeletons() {
+    const ids = ['market-cap', 'volume', 'btc-dominance']
+    ids.forEach(id => {
+    const el = document.getElementById(id)
+    if (!el) return
+    el.innerHTML = `<div class="skeleton skeleton-value"></div>`
+    })
+
+    ;['market-cap-change', 'volume-change', 'dominance-change', 'portfolio-change'].forEach(id => {
+    const el = document.getElementById(id)
+    if (el) el.innerHTML = `<div class="skeleton skeleton-text short"></div>`
+    })
+}
+
+export function showCoinListSkeleton() {
+    const container = document.getElementById('coin-list')
+    if (!container) return
+    container.innerHTML = Array(4).fill('').map(() => `
+    <div class="skeleton-coin-row">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+        <div class="skeleton skeleton-text mid"></div>
+        <div class="skeleton skeleton-text short"></div>
+        </div>
+        <div style="text-align:right; width:80px;">
+        <div class="skeleton skeleton-text wide"></div>
+        <div class="skeleton skeleton-text mid"></div>
+        </div>
+    </div>
+    `).join('')
+}
+
+export function showChartSkeleton() {
+    const wrapper = document.querySelector('.chart-wrapper')
+    if (!wrapper) return
+    wrapper.innerHTML = `<div class="skeleton skeleton-chart"></div>`
+}
+
+export function restoreChart(canvasId = 'price-chart') {
+    const wrapper = document.querySelector('.chart-wrapper')
+    if (!wrapper) return
+    if (!wrapper.querySelector('canvas')) {
+    wrapper.innerHTML = `<canvas id="${canvasId}"></canvas>`
+    }
+}
+
+export function showPortfolioSkeleton() {
+    const container = document.getElementById('portfolio-summary')
+    if (!container) return
+    container.innerHTML = Array(2).fill('').map(() => `
+    <div class="skeleton-coin-row">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+        <div class="skeleton skeleton-text mid"></div>
+        </div>
+        <div style="width:70px; text-align:right;">
+        <div class="skeleton skeleton-text wide"></div>
+        </div>
+    </div>
+    `).join('')
+}
+
+// ------------------------------------------------------------
 //  Helpers
 // ------------------------------------------------------------
 function formatUSD(n) {
