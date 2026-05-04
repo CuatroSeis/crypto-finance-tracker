@@ -324,3 +324,47 @@ export function renderPortfolioSummary(holdings, prices) {
     `
     }).join('')
 }
+
+// ------------------------------------------------------------
+//  Toast notifications
+// ------------------------------------------------------------
+
+// Crear contenedor una sola vez
+function getToastContainer() {
+    let container = document.getElementById('toast-container')
+    if (!container) {
+    container = document.createElement('div')
+    container.id = 'toast-container'
+    container.className = 'toast-container'
+    document.body.appendChild(container)
+    }
+    return container
+}
+
+const TOAST_ICONS = {
+    success: '✓',
+    error:   '✕',
+    info:    'i',
+}
+
+export function showToast(message, type = 'info', duration = 3500) {
+    const container = getToastContainer()
+
+    const toast = document.createElement('div')
+    toast.className = `toast ${type}`
+    toast.innerHTML = `
+    <span class="toast-icon">${TOAST_ICONS[type] || 'i'}</span>
+    <span class="toast-msg">${message}</span>
+    <button class="toast-close" aria-label="Cerrar">✕</button>
+    `
+
+    const remove = () => {
+    toast.classList.add('toast-out')
+    toast.addEventListener('animationend', () => toast.remove(), { once: true })
+    }
+
+    toast.querySelector('.toast-close').addEventListener('click', remove)
+    container.appendChild(toast)
+
+    setTimeout(remove, duration)
+}
