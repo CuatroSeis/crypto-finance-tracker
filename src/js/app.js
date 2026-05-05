@@ -166,14 +166,12 @@ async function refreshPortfolio() {
     if (state.holdings.length === 0) {
     renderPortfolio([], {}, state)
     renderPortfolioSummary([], {})
-    document.getElementById('portfolio-total').textContent  = '$0.00'
-    document.getElementById('portfolio-change').textContent = '—'
     return
     }
 
     const ids    = state.holdings.map(h => h.coinId)
     const prices = await getSimplePrices(ids, ['usd'])
-    state.prices = prices
+    state.prices = { ...state.prices, ...prices }
     renderPortfolio(state.holdings, prices, state)
     renderPortfolioSummary(state.holdings, prices)
 }
