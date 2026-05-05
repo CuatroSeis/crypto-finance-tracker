@@ -162,11 +162,14 @@ function savePortfolio() {
 async function refreshPortfolio() {
     if (state.holdings.length === 0) {
     renderPortfolio([], {}, state)
+    renderPortfolioSummary([], {})
     return
     }
     const ids    = state.holdings.map(h => h.coinId)
     const prices = await getSimplePrices(ids, ['usd'])
+    state.prices = { ...state.prices, ...prices }
     renderPortfolio(state.holdings, prices, state)
+    renderPortfolioSummary(state.holdings, prices)
 }
 
 function openAddAssetModal() {

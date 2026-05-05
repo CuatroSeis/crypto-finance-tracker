@@ -83,47 +83,111 @@ export function renderCoinList(coins) {
 // ------------------------------------------------------------
 //  3. Portfolio
 // ------------------------------------------------------------
-export function renderPortfolio(holdings, prices) {
+export function renderPortfolio(holdings, prices, state) {
     const container = document.getElementById('portfolio-list')
-    container.innerHTML = ''
+    const emptyEl   = document.getElementById('portfolio-empty')
+    if (!container) return
 
     if (holdings.length === 0) {
-    container.innerHTML = `<p style="font-size:12px; color:var(--text-muted); text-align:center; padding: 16px 0">
-        Sin activos. Agregá uno con el botón de abajo.
-    </p>`
-    document.getElementById('portfolio-total').textContent = '$0.00'
+    if (emptyEl) emptyEl.style.display = 'block'
+    document.getElementById('pf-total-value')?.setAttribute('textContent', '$0.00')
     return
     }
 
-  // Calcular valor total
-    const totalValue = holdings.reduce((acc, h) => {
-    const price = prices[h.coinId]?.usd || 0
-    return acc + price * h.amount
-    }, 0)
+    if (emptyEl) emptyEl.style.display = 'none'
 
-    document.getElementById('portfolio-total').textContent = formatUSD(totalValue)
+    let totalValue    = 0
+    let totalInvested = 0
+    let bestCoin      = null
+    let worstCoin     = null
+    let bestPnlPct    = -Infinity
+    let worstPnlPct   = Infinity
 
-    holdings.forEach(h => {
-    const meta  = COIN_COLORS[h.coinId] || { color: '#9ca3af' }
-    const price = prices[h.coinId]?.usd || 0
-    const value = price * h.amount
-    const pct   = totalValue > 0 ? (value / totalValue) * 100 : 0
+  // Primera pasada — calcular totales
+    const rows = holdings.map(h => {
+    const currentPrice = prices[h.coinId]?.usd || 0
+    const value        = currentPrice * h.amount
+    const invested     = (h.buyPrice || 0) * h.amount
+    const pnl          = value - invested
+    const pnlPct       = invested > 0 ? (pnl / invested) * 100 : 0
 
-    const item = document.createElement('div')
-    item.className = 'portfolio-item'
-    item.innerHTML = `
-        <div class="portfolio-item-header">
-        <span class="portfolio-item-name">${h.symbol} · ${h.amount}</span>
-        <span class="portfolio-item-value">${formatUSD(value)}</span>
+    totalValue    += value
+    totalInvested += invested
+
+    if (pnlPct > bestPnlPct)  { bestPnlPct  = pnlPct;  bestCoin  = h }
+    if (pnlPct < worstPnlPct) { worstPnlPct = pnlPct;  worstCoin = h }
+
+    return { ...h, currentPrice, value, invested, pnl, pnlPct }
+    })
+
+  // Actualizar stat cards de la vista portfolio
+    const totalPnl    = totalValue - totalInvested
+  const totalPnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0
+    const isUp        = totalPnl >= 0
+
+    const setEl = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text }
+
+    setEl('pf-total-value',    formatUSD(totalValue))
+    setEl('pf-total-invested', formatUSD(totalInvested))
+    setEl('pf-assets-count',   `${holdings.length} activo${holdings.length !== 1 ? 's' : ''}`)
+    setEl('pf-best-asset',     bestCoin?.symbol  || '—')
+    setEl('pf-worst-asset',    worstCoin?.symbol || '—')
+
+    const pnlEl = document.getElementById('pf-total-pnl')
+    if (pnlEl) {
+    pnlEl.textContent = `${isUp ? '▲' : '▼'} ${formatUSD(Math.abs(totalPnl))} (${Math.abs(totalPnlPct).toFixed(2)}%)`
+    pnlEl.className   = 'stat-change ' + (isUp ? 'up' : 'down')
+    }
+
+    const bestEl = document.getElementById('pf-best-pnl')
+    if (bestEl && bestCoin) {
+    bestEl.textContent = `▲ ${Math.abs(bestPnlPct).toFixed(2)}%`
+    bestEl.className   = 'stat-change up'
+    }
+
+    const worstEl = document.getElementById('pf-worst-pnl')
+    if (worstEl && worstCoin) {
+    worstEl.textContent = `${worstPnlPct >= 0 ? '▲' : '▼'} ${Math.abs(worstPnlPct).toFixed(2)}%`
+    worstEl.className   = 'stat-change ' + (worstPnlPct >= 0 ? 'up' : 'down')
+    }
+
+  // Renderizar filas
+    container.innerHTML = rows.map(r => {
+    const meta  = COIN_COLORS[r.coinId] || { color: '#9ca3af' }
+    const isUp  = r.pnl >= 0
+    const pct   = totalValue > 0 ? (r.value / totalValue) * 100 : 0
+
+    return `
+        <div class="portfolio-row">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:13px; font-weight:500; color:${meta.color};">${r.symbol}</span>
+            <div class="portfolio-bar-track" style="width:60px;">
+            <div class="portfolio-bar-fill"
+                    style="width:${pct.toFixed(1)}%; background:${meta.color};">
+            </div>
+            </div>
         </div>
-        <div class="portfolio-bar-track">
-        <div class="portfolio-bar-fill"
-                style="width:${pct.toFixed(1)}%; background:${meta.color}">
+        <span style="color:var(--text-secondary);">${r.amount}</span>
+        <span style="color:var(--text-secondary);">${formatUSD(r.buyPrice || 0)}</span>
+        <span style="color:var(--text-primary);">${formatUSD(r.currentPrice)}</span>
+        <span style="color:var(--text-primary); font-weight:500;">${formatUSD(r.value)}</span>
+        <div>
+            <p style="font-size:13px; color:${isUp ? 'var(--accent-green)' : 'var(--accent-red)'};">
+            ${isUp ? '▲' : '▼'} ${formatUSD(Math.abs(r.pnl))}
+            </p>
+            <p style="font-size:11px; color:${isUp ? 'var(--accent-green)' : 'var(--accent-red)'};">
+            ${Math.abs(r.pnlPct).toFixed(2)}%
+            </p>
         </div>
+        <button class="btn-remove-asset"
+                data-coin="${r.coinId}"
+                data-symbol="${r.symbol}"
+                style="background:transparent; border:none; color:var(--text-muted);
+                        cursor:pointer; font-size:16px; padding:4px; line-height:1;"
+                title="Eliminar">✕</button>
         </div>
     `
-    container.appendChild(item)
-    })
+    }).join('')
 }
 
 // ------------------------------------------------------------
