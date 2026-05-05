@@ -5,7 +5,9 @@
 import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
 import { initRouter, onEnter } from './router.js'
 // Agregar al import de ui.js
-import { renderGlobalStats, renderCoinList, renderPortfolio, renderPortfolioSummary, renderConversion, renderQuickConversions, renderPricesGrid } from './ui.js'
+import { renderGlobalStats, renderCoinList, renderPortfolio, 
+renderPortfolioSummary, renderConversion, renderQuickConversions, renderPricesGrid, showStatCardSkeletons, showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, restoreChart, showToast,
+} from './ui.js'
 
 // ------------------------------------------------------------
 //  Estado de la app
@@ -258,6 +260,7 @@ function openAddAssetModal() {
 
     savePortfolio()
     close()
+    showToast(`${symbol} agregado al portfolio`, 'success')
     await refreshPortfolio()
     } 
 }
@@ -267,26 +270,44 @@ function openAddAssetModal() {
 // ------------------------------------------------------------
 async function loadDashboard() {
     try {
-    // Inicializar chart acá, cuando el canvas YA es visible
+    // 1. Mostrar skeletons inmediatamente
+    showStatCardSkeletons()
+    showCoinListSkeleton()
+    showChartSkeleton()
+    showPortfolioSkeleton()
+
+    // 2. Restaurar canvas antes de init (skeleton lo reemplazó)
+    restoreChart()
     initChart()
 
-    const [globalData, coinsData, historyData] = await Promise.all([
+    // 3. Fetch en paralelo
+    const [globalData, coinsData, historyData, prices] = await Promise.all([
         getGlobalData(),
         getCoinsMarket(state.coins),
         getCoinHistory(state.chartCoin, state.chartDays),
+        getSimplePrices(
+        ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
+        ['usd', 'eur', 'ars']
+        ),
     ])
 
+    state.prices = prices
+
+    // 4. Reemplazar skeletons con datos reales
     renderGlobalStats(globalData)
     renderCoinList(coinsData)
     updateChartWithData(historyData)
-
-    await Promise.all([
-        renderPortfolioSummary(state.holdings, prices),
-        updateConverter(),
-    ])
+    renderPortfolioSummary(state.holdings, prices)
+    renderConversion(
+        parseFloat(document.getElementById('conv-amount')?.value) || 1,
+        document.getElementById('conv-from')?.value || 'bitcoin',
+        document.getElementById('conv-to')?.value   || 'usd',
+        prices
+    )
 
     } catch (err) {
     console.error('Error cargando dashboard:', err)
+    showToast('Error al conectar con la API. Reintentando...', 'error')
     }
 }
 
@@ -304,6 +325,7 @@ async function loadConverterView() {
     await updateFullConverter()
     } catch (err) {
     console.error('Error cargando converter:', err)
+    showToast('Error al cargar el convertidor', 'error')
     }
 }
 
@@ -361,10 +383,7 @@ function bindEvents() {
     document.addEventListener('click', async e => {
     const btn = e.target.closest('.btn-remove-asset')
     if (!btn) return
-    const coin     = btn.dataset.coin
-    const symbol   = btn.dataset.symbol || coin
-    state.holdings = state.holdings.filter(h => h.coinId !== coin)
-    state.prices   = {}  // forzar re-fetch para evitar caché viejo
+    state.holdings = state.holdings.filter(h => h.coinId !== btn.dataset.coin)
     savePortfolio()
     showToast(`${symbol} eliminado del portfolio`, 'info')
     await refreshPortfolio()
