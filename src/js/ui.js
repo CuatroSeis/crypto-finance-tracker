@@ -199,7 +199,6 @@ export function renderPortfolio(holdings, prices, state) {
     }).join('')
 }
 
-
 // ------------------------------------------------------------
 //  4. Convertidor
 // ------------------------------------------------------------
@@ -541,6 +540,113 @@ export function renderDonutChart(holdings, prices) {
         <span class="legend-name">${d.symbol}</span>
         <span class="legend-pct">${pct}%</span>
         <span class="legend-value">${formatUSD(d.value)}</span>
+        </div>
+    `
+    }).join('')
+}
+
+// ------------------------------------------------------------
+//  Fear & Greed Index
+// ------------------------------------------------------------
+
+// Color según el valor 0-100
+function getFGColor(value) {
+  if (value <= 24)  return '#f87171' // Extreme Fear — rojo
+  if (value <= 44)  return '#fb923c' // Fear — naranja
+  if (value <= 55)  return '#facc15' // Neutral — amarillo
+  if (value <= 74)  return '#4ade80' // Greed — verde claro
+  return '#34d399'                   // Extreme Greed — verde
+}
+
+function getFGLabel(classification) {
+    const map = {
+    'Extreme Fear':  'Miedo extremo',
+    'Fear':          'Miedo',
+    'Neutral':       'Neutral',
+    'Greed':         'Codicia',
+    'Extreme Greed': 'Codicia extrema',
+    }
+    return map[classification] || classification
+}
+
+export function renderFearGreed(data) {
+    if (!data || !data.length) return
+
+    const today   = data[0]
+    const value   = parseInt(today.value)
+    const color   = getFGColor(value)
+
+  // Actualizar valor y label
+    const valueEl = document.getElementById('fg-value')
+    const labelEl = document.getElementById('fg-label')
+    if (valueEl) { valueEl.textContent = value; valueEl.style.color = color }
+    if (labelEl)   labelEl.textContent = getFGLabel(today.value_classification)
+
+  // Dibujar gauge (semicírculo)
+    const canvas = document.getElementById('fg-gauge')
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    const cx  = 100
+    const cy  = 100
+    const r   = 80
+
+    ctx.clearRect(0, 0, 200, 110)
+
+  // Track gris
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, Math.PI, 0)
+    ctx.lineWidth   = 14
+    ctx.strokeStyle = '#1e1e3a'
+    ctx.stroke()
+
+  // Arco de valor
+  const angle = Math.PI + (value / 100) * Math.PI
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, Math.PI, angle)
+    ctx.lineWidth   = 14
+    ctx.strokeStyle = color
+    ctx.lineCap     = 'round'
+    ctx.stroke()
+
+  // Aguja
+  const needleAngle = Math.PI + (value / 100) * Math.PI
+  const nx = cx + (r - 20) * Math.cos(needleAngle)
+  const ny = cy + (r - 20) * Math.sin(needleAngle)
+    ctx.beginPath()
+    ctx.moveTo(cx, cy)
+    ctx.lineTo(nx, ny)
+    ctx.lineWidth   = 2
+    ctx.strokeStyle = '#f1f5f9'
+    ctx.lineCap     = 'round'
+    ctx.stroke()
+
+  // Punto central
+    ctx.beginPath()
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2)
+    ctx.fillStyle = '#f1f5f9'
+    ctx.fill()
+
+  // Historial 7 días
+    const historyEl = document.getElementById('fg-history-list')
+    if (!historyEl) return
+
+    historyEl.innerHTML = data.map(d => {
+    const v     = parseInt(d.value)
+    const c     = getFGColor(v)
+    const date  = new Date(d.timestamp * 1000)
+    const label = date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
+
+    return `
+        <div class="fg-history-item">
+        <span class="fg-history-date">${label}</span>
+        <div class="fg-history-bar-wrap">
+            <div class="fg-history-bar" style="width:${v}%; background:${c};"></div>
+        </div>
+        <span class="fg-history-score" style="color:${c};">${v}</span>
+        <span class="fg-history-tag" style="color:${c};">
+            ${getFGLabel(d.value_classification)}
+        </span>
         </div>
     `
     }).join('')
