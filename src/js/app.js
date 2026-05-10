@@ -4,10 +4,10 @@
 
 import { initRouter, onEnter } from './router.js'
 // Agregar al import de ui.js
-import { renderGlobalStats, renderCoinList, renderPortfolio,renderPortfolioSummary, renderConversion, renderQuickConversions,renderPricesGrid, renderDonutChart, renderFearGreed,showStatCardSkeletons,showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, showToast,
+import { renderGlobalStats, renderCoinList, renderPortfolio,renderPortfolioSummary, renderConversion, renderQuickConversions,renderPricesGrid, renderDonutChart, renderFearGreed, renderComparatorChart, renderComparatorMetrics, showStatCardSkeletons,showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, showToast,
 } from './ui.js'
 import { createCoinSearch } from './search.js'
-import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices, searchCoins, getFearGreedIndex } from './api.js'
+import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices, searchCoins, getFearGreedIndex, getCoinDetails } from './api.js'
 
 // ------------------------------------------------------------
 //  Estado de la app
@@ -16,6 +16,9 @@ const state = {
     coins:         ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
     chartCoin:     'bitcoin',
     chartDays:     7,
+    compDays:      7,
+    compCoinA:     null,
+    compCoinB:     null,
     holdings:      JSON.parse(localStorage.getItem('portfolio') || '[]'),
     prices:        {},
     chartInstance: null,
@@ -368,18 +371,66 @@ renderFearGreed(fearGreedData)
 // ------------------------------------------------------------
 //  Vista Converter — carga precios y tabla de referencia
 // ------------------------------------------------------------
-async function loadConverterView() {
+async function loadComparatorView() {
+  // Montar buscadores si no existen todavía
+    const containerA = document.getElementById('comp-search-a')
+    const containerB = document.getElementById('comp-search-b')
+
+    if (containerA && !containerA.dataset.mounted) {
+    containerA.dataset.mounted = 'true'
+    createCoinSearch({
+        container:   containerA,
+        placeholder: 'Buscar coin A...',
+        onSelect: coin => {
+        state.compCoinA = coin
+        updateCompPreview('a', coin)
+        tryLoadComparison()
+        
+    }
+    })
+
+    if (containerB && !containerB.dataset.mounted) {
+    containerB.dataset.mounted = 'true'
+    createCoinSearch({
+        container:   containerB,
+        placeholder: 'Buscar coin B...',
+        onSelect: coin => {
+        state.compCoinB = coin
+        updateCompPreview('b', coin)
+        tryLoadComparison()
+        }
+    })
+    }
+}
+
+function updateCompPreview(side, coin) {
+    const preview = document.getElementById(`comp-preview-${side}`)
+    if (!preview) return
+    preview.innerHTML = coin.thumb
+    ? `<img src="${coin.thumb}" alt="${coin.symbol}" /> <span>${coin.name} (${coin.symbol})</span>`
+    : `<span>${coin.name} (${coin.symbol})</span>`
+}
+
+async function tryLoadComparison() {
+    const { compCoinA, compCoinB, compDays } = state
+    if (!compCoinA || !compCoinB) return
+
     try {
-    const prices = await getSimplePrices(
-        ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
-        ['usd', 'eur', 'ars']
-    )
-    renderQuickConversions(prices)
-    renderPricesGrid(prices)
-    await updateFullConverter()
+    showToast(`Comparando ${compCoinA.symbol} vs ${compCoinB.symbol}...`, 'info', 2000)
+
+    const [histA, histB, detailsA, detailsB] = await Promise.all([
+        getCoinHistory(compCoinA.id, compDays),
+        getCoinHistory(compCoinB.id, compDays),
+        getCoinDetails(compCoinA.id),
+        getCoinDetails(compCoinB.id),
+    ])
+
+    renderComparatorChart(histA, histB, compCoinA, compCoinB, compDays)
+    renderComparatorMetrics(detailsA, detailsB)
+
     } catch (err) {
-    console.error('Error cargando converter:', err)
-    showToast('Error al cargar el convertidor', 'error')
+    console.error('Error en comparador:', err)
+    showToast('Error al cargar la comparación', 'error')
     }
 }
 
@@ -395,6 +446,15 @@ function bindEvents() {
     btn.classList.add('active')
     state.chartDays = Number(btn.dataset.days)
     await updateChart()
+    })
+    // Períodos del comparador
+    document.addEventListener('click', async e => {
+        const btn = e.target.closest('[data-comp-days]')
+        if (!btn) return
+        document.querySelectorAll('[data-comp-days]').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        state.compDays = Number(btn.dataset.compDays)
+        await tryLoadComparison()
     })
 
   // Selector de coin del chart
@@ -461,6 +521,7 @@ async function init() {
     onEnter('dashboard', loadDashboard)
     onEnter('portfolio', refreshPortfolio)
     onEnter('converter', loadConverterView)
+    onEnter('comparator', loadComparatorView)
 
   // 4. Auto-refresh cada 60s solo en dashboard
     setInterval(() => {
@@ -469,4 +530,4 @@ async function init() {
     }, 60_000)
 }
 
-init()
+init()}
