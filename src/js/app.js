@@ -339,25 +339,26 @@ async function loadDashboard() {
     initChart()
 
     const [results] = await Promise.all([
-        Promise.all([
-        getGlobalData(),
-        getCoinsMarket(state.coins),
-        getCoinHistory(state.chartCoin, state.chartDays),
-        getSimplePrices(
-            ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
-            ['usd', 'eur', 'ars']
-        ),
-        ]),
-        new Promise(r => setTimeout(r, 800))
-    ])
+    Promise.all([
+    getGlobalData(),
+    getCoinsMarket(state.coins),
+    getCoinHistory(state.chartCoin, state.chartDays),
+    getSimplePrices(
+        ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
+        ['usd', 'eur', 'ars']
+    ),
+    getFearGreedIndex(),
+    ]),
+    new Promise(r => setTimeout(r, 800))
+])
 
-    const [globalData, coinsData, historyData, prices] = results
-    state.prices = prices
+const [globalData, coinsData, historyData, prices, fearGreedData] = results
+state.prices = prices
 
-    renderGlobalStats(globalData)
-    renderCoinList(coinsData)
-    updateChartWithData(historyData)
-
+renderGlobalStats(globalData)
+renderCoinList(coinsData)
+updateChartWithData(historyData)
+renderFearGreed(fearGreedData)
     } catch (err) {
     console.error('Error cargando dashboard:', err)
     showToast('Error al conectar con la API. Reintentando...', 'error')
