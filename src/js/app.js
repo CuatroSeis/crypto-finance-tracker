@@ -5,7 +5,7 @@
 import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
 import { initRouter, onEnter } from './router.js'
 // Agregar al import de ui.js
-import { renderGlobalStats,renderCoinList,renderPortfolio,renderPortfolioSummary,renderConversion,renderQuickConversions,renderPricesGrid,showStatCardSkeletons,showCoinListSkeleton,showChartSkeleton,showPortfolioSkeleton,showToast,
+import { renderGlobalStats, renderCoinList, renderPortfolio,renderPortfolioSummary, renderConversion, renderQuickConversions,renderPricesGrid, renderDonutChart, showStatCardSkeletons,showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, showToast,
 } from './ui.js'
 
 // ------------------------------------------------------------
@@ -161,18 +161,22 @@ function savePortfolio() {
 }
 
 async function refreshPortfolio() {
-  // Siempre renderizar, incluso con 0 activos
     if (state.holdings.length === 0) {
     renderPortfolio([], {}, state)
     renderPortfolioSummary([], {})
+    renderDonutChart([], {})
+    document.getElementById('portfolio-total').textContent  = '$0.00'
+    document.getElementById('portfolio-change').textContent = '—'
     return
     }
 
     const ids    = state.holdings.map(h => h.coinId)
     const prices = await getSimplePrices(ids, ['usd'])
-    state.prices = { ...state.prices, ...prices }
+    state.prices = prices
+
     renderPortfolio(state.holdings, prices, state)
     renderPortfolioSummary(state.holdings, prices)
+    renderDonutChart(state.holdings, prices)
 }
 
 function openAddAssetModal() {
