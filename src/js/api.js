@@ -54,3 +54,14 @@ export async function getSimplePrices(coinIds, currencies) {
     const curr = currencies.join(',')
     return fetchJSON(`/simple/price?ids=${ids}&vs_currencies=${curr}`)
 }
+
+// ------------------------------------------------------------
+//  5. Búsqueda de coins por nombre o símbolo
+//     @param {string} query — 'bitcoin' | 'sol' | 'eth'...
+// ------------------------------------------------------------
+export async function searchCoins(query) {
+    if (!query || query.trim().length < 2) return []
+    const data = await fetchJSON(`/search?query=${encodeURIComponent(query.trim())}`)
+  // Devolver solo los primeros 6 resultados relevantes
+    return data.coins?.slice(0, 6) || []
+}
