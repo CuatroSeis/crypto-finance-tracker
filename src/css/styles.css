@@ -897,3 +897,97 @@ body {
     color: var(--text-muted);
     text-align: center;
 }
+
+/* =====================
+    FEAR & GREED INDEX
+   ===================== */
+.fear-greed-card { padding: 20px; }
+
+.fg-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+    align-items: center;
+}
+
+.fg-gauge-wrap {
+    position: relative;
+    width: 200px;
+    height: 110px;
+}
+
+.fg-center {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+.fg-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.fg-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 2px;
+}
+
+.fg-history-title {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+}
+
+.fg-history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+}
+
+.fg-history-item:last-child { border-bottom: none; }
+
+.fg-history-date  { color: var(--text-muted); width: 70px; flex-shrink: 0; }
+.fg-history-bar-wrap {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-base);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.fg-history-bar   { height: 4px; border-radius: 4px; transition: width 0.4s ease; }
+.fg-history-score { color: var(--text-primary); font-weight: 500; width: 28px; text-align: right; }
+.fg-history-tag   { font-size: 10px; width: 60px; text-align: right; flex-shrink: 0; }
+
+@media (max-width: 700px) {
+    .fg-layout { grid-template-columns: 1fr; }
+    .fg-gauge-wrap { margin: 0 auto; }
+}
+
+/* =====================
+    BOTTOM WIDGETS GRID
+   ===================== */
+.bottom-widgets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .bottom-widgets {
+    grid-template-columns: 1fr;
+    }
+}
