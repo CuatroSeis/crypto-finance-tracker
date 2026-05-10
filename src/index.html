@@ -88,65 +88,83 @@
 
     </section>
 
-    <!-- ==================== -->
-    <!--   VISTA: PORTFOLIO   -->
-    <!-- ==================== -->
-    <section id="view-portfolio" class="view">
+<!-- ==================== -->
+<!--   VISTA: PORTFOLIO   -->
+<!-- ==================== -->
+<section id="view-portfolio" class="view">
 
-        <div class="view-header">
-        <div>
-            <h1 class="view-title">Mi Portfolio</h1>
-            <p class="view-subtitle">Seguí tus inversiones en tiempo real</p>
-        </div>
-        <button class="btn-primary" id="btn-add-asset">+ Agregar activo</button>
-        </div>
+    <div class="view-header">
+    <div>
+        <h1 class="view-title">Mi Portfolio</h1>
+        <p class="view-subtitle">Seguí tus inversiones en tiempo real</p>
+    </div>
+    <button class="btn-primary" id="btn-add-asset">+ Agregar activo</button>
+    </div>
 
-        <!-- Resumen superior -->
-        <div class="stats-grid" style="margin-bottom:20px;">
-        <div class="stat-card">
-            <p class="stat-label">Valor total</p>
-            <h2 class="stat-value" id="pf-total-value">$0.00</h2>
-            <p class="stat-change" id="pf-total-pnl">—</p>
-        </div>
-        <div class="stat-card">
-            <p class="stat-label">Total invertido</p>
-            <h2 class="stat-value" id="pf-total-invested">$0.00</h2>
-            <p class="stat-change" id="pf-assets-count">0 activos</p>
-        </div>
-        <div class="stat-card">
-            <p class="stat-label">Mejor activo</p>
-            <h2 class="stat-value" id="pf-best-asset">—</h2>
-            <p class="stat-change up" id="pf-best-pnl">—</p>
-        </div>
-        <div class="stat-card">
-            <p class="stat-label">Peor activo</p>
-            <h2 class="stat-value" id="pf-worst-asset">—</h2>
-            <p class="stat-change down" id="pf-worst-pnl">—</p>
-        </div>
-        </div>
+    <!-- Stat cards -->
+    <div class="stats-grid" style="margin-bottom:20px;">
+    <div class="stat-card">
+        <p class="stat-label">Valor total</p>
+        <h2 class="stat-value" id="pf-total-value">$0.00</h2>
+        <p class="stat-change" id="pf-total-pnl">—</p>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">Total invertido</p>
+        <h2 class="stat-value" id="pf-total-invested">$0.00</h2>
+        <p class="stat-change" id="pf-assets-count">0 activos</p>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">Mejor activo</p>
+        <h2 class="stat-value" id="pf-best-asset">—</h2>
+        <p class="stat-change up" id="pf-best-pnl">—</p>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">Peor activo</p>
+        <h2 class="stat-value" id="pf-worst-asset">—</h2>
+        <p class="stat-change down" id="pf-worst-pnl">—</p>
+    </div>
+    </div>
 
-        <!-- Tabla de activos -->
-        <div class="glass-card">
+    <!-- Grid chart + tabla -->
+    <div class="portfolio-grid">
+
+    <!-- Donut chart -->
+    <div class="glass-card chart-donut-card">
+        <h3 class="card-title">Distribución</h3>
+        <div class="donut-wrapper">
+        <canvas id="portfolio-chart"></canvas>
+        <div class="donut-center" id="donut-center">
+            <p class="donut-center-label">Total</p>
+            <p class="donut-center-value" id="donut-total">$0.00</p>
+        </div>
+        </div>
+        <div class="donut-legend" id="donut-legend"></div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="glass-card">
         <div class="portfolio-table-header">
-            <span>Activo</span>
-            <span>Cantidad</span>
-            <span>Precio compra</span>
-            <span>Precio actual</span>
-            <span>Valor</span>
-            <span>P&L</span>
-            <span></span>
+        <span>Activo</span>
+        <span>Cantidad</span>
+        <span>P. compra</span>
+        <span>P. actual</span>
+        <span>Valor</span>
+        <span>P&L</span>
+        <span></span>
         </div>
         <div id="portfolio-list">
-            <div class="empty-state" id="portfolio-empty">
+        <div class="empty-state" id="portfolio-empty">
             <p>Sin activos todavía.</p>
             <p style="font-size:12px; margin-top:4px;">
-                Hacé clic en "Agregar activo" para empezar.
+            Hacé clic en "Agregar activo" para empezar.
             </p>
-            </div>
         </div>
         </div>
+    </div>
 
-    </section>
+  </div>
+
+</section>
 
     <!-- ==================== -->
     <!--   VISTA: CONVERTER   -->

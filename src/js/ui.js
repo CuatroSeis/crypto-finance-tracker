@@ -323,3 +323,93 @@ export function renderPortfolioSummary(holdings, prices) {
     `
     }).join('')
 }
+
+// ------------------------------------------------------------
+//  Skeletons
+// ------------------------------------------------------------
+export function showStatCardSkeletons() {
+    const ids = ['market-cap', 'volume', 'btc-dominance', 'portfolio-total']
+    ids.forEach(id => {
+    const el = document.getElementById(id)
+    if (!el) return
+    el.innerHTML = `<div class="skeleton skeleton-value"></div>`
+    })
+    ;['market-cap-change', 'volume-change', 'dominance-change', 'portfolio-change'].forEach(id => {
+    const el = document.getElementById(id)
+    if (el) el.innerHTML = `<div class="skeleton skeleton-text short"></div>`
+    })
+}
+
+export function showCoinListSkeleton() {
+    const container = document.getElementById('coin-list')
+    if (!container) return
+    container.innerHTML = Array(4).fill('').map(() => `
+    <div class="skeleton-coin-row">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+        <div class="skeleton skeleton-text mid"></div>
+        <div class="skeleton skeleton-text short"></div>
+        </div>
+        <div style="text-align:right; width:80px;">
+        <div class="skeleton skeleton-text wide"></div>
+        <div class="skeleton skeleton-text mid"></div>
+        </div>
+    </div>
+    `).join('')
+}
+
+export function showChartSkeleton() {
+    const wrapper = document.querySelector('.chart-wrapper')
+    if (!wrapper) return
+    wrapper.innerHTML = `<div class="skeleton skeleton-chart"></div>`
+}
+
+export function showPortfolioSkeleton() {
+    const container = document.getElementById('portfolio-summary')
+    if (!container) return
+    container.innerHTML = Array(2).fill('').map(() => `
+    <div class="skeleton-coin-row">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+        <div class="skeleton skeleton-text mid"></div>
+        </div>
+        <div style="width:70px; text-align:right;">
+        <div class="skeleton skeleton-text wide"></div>
+        </div>
+    </div>
+    `).join('')
+}
+
+// ------------------------------------------------------------
+//  Toast notifications
+// ------------------------------------------------------------
+function getToastContainer() {
+    let container = document.getElementById('toast-container')
+    if (!container) {
+    container = document.createElement('div')
+    container.id = 'toast-container'
+    container.className = 'toast-container'
+    document.body.appendChild(container)
+    }
+    return container
+}
+
+const TOAST_ICONS = { success: '✓', error: '✕', info: 'i' }
+
+export function showToast(message, type = 'info', duration = 3500) {
+    const container = getToastContainer()
+    const toast     = document.createElement('div')
+    toast.className = `toast ${type}`
+    toast.innerHTML = `
+    <span class="toast-icon">${TOAST_ICONS[type] || 'i'}</span>
+    <span class="toast-msg">${message}</span>
+    <button class="toast-close" aria-label="Cerrar">✕</button>
+    `
+    const remove = () => {
+    toast.classList.add('toast-out')
+    toast.addEventListener('animationend', () => toast.remove(), { once: true })
+    }
+    toast.querySelector('.toast-close').addEventListener('click', remove)
+    container.appendChild(toast)
+    setTimeout(remove, duration)
+}
