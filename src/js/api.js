@@ -65,3 +65,14 @@ export async function searchCoins(query) {
   // Devolver solo los primeros 6 resultados relevantes
     return data.coins?.slice(0, 6) || []
 }
+
+// ------------------------------------------------------------
+//  6. Fear & Greed Index
+//     No requiere API key — alternative.me
+// ------------------------------------------------------------
+export async function getFearGreedIndex() {
+    const response = await fetch('https://api.alternative.me/fng/?limit=7')
+    if (!response.ok) throw new Error('Fear & Greed API error')
+    const data = await response.json()
+  return data.data // array de 7 días, [0] es hoy
+}
