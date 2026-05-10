@@ -2,11 +2,12 @@
 //  app.js — Punto de entrada y orquestador principal
 // ============================================================
 
-import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
 import { initRouter, onEnter } from './router.js'
 // Agregar al import de ui.js
-import { renderGlobalStats,renderCoinList,renderPortfolio,renderPortfolioSummary,renderConversion,renderQuickConversions,renderPricesGrid,showStatCardSkeletons,showCoinListSkeleton,showChartSkeleton,showPortfolioSkeleton,showToast,
+import { renderGlobalStats, renderCoinList, renderPortfolio,renderPortfolioSummary, renderConversion, renderQuickConversions,renderPricesGrid, renderDonutChart, renderFearGreed,showStatCardSkeletons,showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, showToast,
 } from './ui.js'
+import { createCoinSearch } from './search.js'
+import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices, searchCoins, getFearGreedIndex } from './api.js'
 
 // ------------------------------------------------------------
 //  Estado de la app
@@ -161,10 +162,10 @@ function savePortfolio() {
 }
 
 async function refreshPortfolio() {
-  // Siempre renderizar, incluso con 0 activos
     if (state.holdings.length === 0) {
     renderPortfolio([], {}, state)
     renderPortfolioSummary([], {})
+    renderDonutChart([], {})
     document.getElementById('portfolio-total').textContent  = '$0.00'
     document.getElementById('portfolio-change').textContent = '—'
     return
@@ -173,8 +174,10 @@ async function refreshPortfolio() {
     const ids    = state.holdings.map(h => h.coinId)
     const prices = await getSimplePrices(ids, ['usd'])
     state.prices = prices
+
     renderPortfolio(state.holdings, prices, state)
     renderPortfolioSummary(state.holdings, prices)
+    renderDonutChart(state.holdings, prices)
 }
 
 function openAddAssetModal() {
@@ -189,32 +192,48 @@ function openAddAssetModal() {
     `
     modal.innerHTML = `
     <div style="background:#13132a; border:1px solid #2a2a4a; border-radius:14px;
-                padding:28px; width:340px; display:flex; flex-direction:column; gap:14px;">
+                padding:28px; width:360px; display:flex; flex-direction:column; gap:14px;">
+
         <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="color:#a78bfa; font-size:13px; text-transform:uppercase; letter-spacing:0.8px">
+        <h3 style="color:#a78bfa; font-size:13px; text-transform:uppercase; letter-spacing:0.8px;">
             Agregar activo
         </h3>
-        <span id="modal-close" style="color:#4b5563; cursor:pointer; font-size:18px; line-height:1;">✕</span>
+        <span id="modal-close"
+                style="color:#4b5563; cursor:pointer; font-size:18px; line-height:1;">✕</span>
         </div>
-        <select id="modal-coin"
-        style="background:#0a0a15; border:1px solid #2a2a4a; color:#f1f5f9;
-                padding:10px; border-radius:6px; font-size:13px;">
-        <option value="bitcoin|BTC">Bitcoin (BTC)</option>
-        <option value="ethereum|ETH">Ethereum (ETH)</option>
-        <option value="solana|SOL">Solana (SOL)</option>
-        <option value="binancecoin|BNB">BNB</option>
-        </select>
-        <input id="modal-amount" type="number" placeholder="Cantidad (ej: 0.5)"
+
+        <!-- Buscador de coin -->
+        <div id="coin-search-container"></div>
+
+        <!-- Coin seleccionada (preview) -->
+        <div id="coin-preview" style="display:none;
+            background:#0a0a15; border:1px solid #2a2a4a; border-radius:6px;
+            padding:10px 12px; display:none; align-items:center; gap:10px;">
+        <img id="preview-thumb" src="" alt=""
+                style="width:24px; height:24px; border-radius:50%;" />
+        <span id="preview-name"
+                style="font-size:13px; color:#f1f5f9; flex:1;"></span>
+        <span id="preview-symbol"
+                style="font-size:11px; color:#6b7280;"></span>
+        </div>
+
+        <input id="modal-amount" type="number"
+                placeholder="Cantidad  (ej: 0.5)"
                 min="0" step="any"
                 style="background:#0a0a15; border:1px solid #2a2a4a; color:#f1f5f9;
                     padding:10px; border-radius:6px; font-size:13px;" />
-        <input id="modal-buy-price" type="number" placeholder="Precio de compra en USD (ej: 40000)"
+
+        <input id="modal-buy-price" type="number"
+                placeholder="Precio de compra en USD (ej: 40000)"
                 min="0" step="any"
                 style="background:#0a0a15; border:1px solid #2a2a4a; color:#f1f5f9;
                     padding:10px; border-radius:6px; font-size:13px;" />
-        <p id="modal-error" style="color:#f87171; font-size:12px; display:none;">
+
+        <p id="modal-error"
+            style="color:#f87171; font-size:12px; display:none;">
         Completá todos los campos correctamente.
         </p>
+
         <div style="display:flex; gap:10px;">
         <button id="modal-cancel"
             style="flex:1; padding:10px; border-radius:6px; background:transparent;
@@ -227,10 +246,27 @@ function openAddAssetModal() {
             Agregar
         </button>
         </div>
+
     </div>
     `
 
     document.body.appendChild(modal)
+
+  // Montar el buscador
+    const searchContainer = document.getElementById('coin-search-container')
+    const coinSearch = createCoinSearch({
+    container:   searchContainer,
+    placeholder: 'Buscar coin... (ej: bitcoin, sol, eth)',
+    onSelect: (coin) => {
+      // Mostrar preview de la coin seleccionada
+        const preview = document.getElementById('coin-preview')
+        preview.style.display     = 'flex'
+        document.getElementById('preview-thumb').src         = coin.thumb || ''
+        document.getElementById('preview-thumb').style.display = coin.thumb ? 'block' : 'none'
+        document.getElementById('preview-name').textContent   = coin.name
+        document.getElementById('preview-symbol').textContent = coin.symbol
+    }
+    })
 
     const close = () => modal.remove()
     document.getElementById('modal-close').onclick  = close
@@ -238,71 +274,91 @@ function openAddAssetModal() {
     modal.addEventListener('click', e => { if (e.target === modal) close() })
 
     document.getElementById('modal-save').onclick = async () => {
-    const [coinId, symbol] = document.getElementById('modal-coin').value.split('|')
+    const selected  = coinSearch.getSelected()
     const amount    = parseFloat(document.getElementById('modal-amount').value)
     const buyPrice  = parseFloat(document.getElementById('modal-buy-price').value)
     const errorEl   = document.getElementById('modal-error')
 
-    if (!amount || amount <= 0 || !buyPrice || buyPrice <= 0) {
+    if (!selected) {
+        errorEl.textContent   = 'Seleccioná una coin de la búsqueda.'
         errorEl.style.display = 'block'
         return
     }
 
-    const existing = state.holdings.find(h => h.coinId === coinId)
+    if (!amount || amount <= 0 || !buyPrice || buyPrice <= 0) {
+        errorEl.textContent   = 'Completá todos los campos correctamente.'
+        errorEl.style.display = 'block'
+        return
+    }
+
+    errorEl.style.display = 'none'
+
+    const existing = state.holdings.find(h => h.coinId === selected.id)
     if (existing) {
-        const total        = existing.amount + amount
-      existing.buyPrice  = (existing.buyPrice * existing.amount + buyPrice * amount) / total
-        existing.amount    = total
+        const total       = existing.amount + amount
+      existing.buyPrice = (existing.buyPrice * existing.amount + buyPrice * amount) / total
+        existing.amount   = total
     } else {
-        state.holdings.push({ coinId, symbol, amount, buyPrice })
+        state.holdings.push({
+        coinId:   selected.id,
+        symbol:   selected.symbol,
+        name:     selected.name,
+        thumb:    selected.thumb,
+        amount,
+        buyPrice,
+        })
+    }
+
+    // Asegurarse de que la coin esté en el array de coins del state
+    if (!state.coins.includes(selected.id)) {
+        state.coins.push(selected.id)
     }
 
     savePortfolio()
     close()
-    showToast(`${symbol} agregado al portfolio`, 'success')
+    showToast(`${selected.symbol} agregado al portfolio`, 'success')
     await refreshPortfolio()
-    } 
-}
+    }
 
+  // Focus automático en el buscador
+    setTimeout(() => coinSearch.focus(), 50)
+}
 // ------------------------------------------------------------
 //  Vista Dashboard — carga datos globales
 // ------------------------------------------------------------
 async function loadDashboard() {
     try {
-    // 1. Mostrar skeletons inmediatamente
     showStatCardSkeletons()
     showCoinListSkeleton()
     showChartSkeleton()
-    showPortfolioSkeleton()
 
-    // 2. Restaurar canvas antes de init (skeleton lo reemplazó)
+    const wrapper = document.querySelector('.chart-wrapper')
+    if (wrapper && !wrapper.querySelector('canvas')) {
+        wrapper.innerHTML = '<canvas id="price-chart"></canvas>'
+    }
     initChart()
 
-    // 3. Fetch en paralelo
-    const [globalData, coinsData, historyData, prices] = await Promise.all([
-        getGlobalData(),
-        getCoinsMarket(state.coins),
-        getCoinHistory(state.chartCoin, state.chartDays),
-        getSimplePrices(
+    const [results] = await Promise.all([
+    Promise.all([
+    getGlobalData(),
+    getCoinsMarket(state.coins),
+    getCoinHistory(state.chartCoin, state.chartDays),
+    getSimplePrices(
         ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
         ['usd', 'eur', 'ars']
-        ),
-    ])
+    ),
+    getFearGreedIndex(),
+    ]),
+    new Promise(r => setTimeout(r, 800))
+])
 
-    state.prices = prices
+const [globalData, coinsData, historyData, prices, fearGreedData] = results
+state.prices = prices
 
-    // 4. Reemplazar skeletons con datos reales
-    renderGlobalStats(globalData)
-    renderCoinList(coinsData)
-    updateChartWithData(historyData)
-    renderPortfolioSummary(state.holdings, prices)
-    renderConversion(
-        parseFloat(document.getElementById('conv-amount')?.value) || 1,
-        document.getElementById('conv-from')?.value || 'bitcoin',
-        document.getElementById('conv-to')?.value   || 'usd',
-        prices
-    )
-
+renderGlobalStats(globalData)
+renderCoinList(coinsData)
+updateChartWithData(historyData)
+renderFearGreed(fearGreedData)
     } catch (err) {
     console.error('Error cargando dashboard:', err)
     showToast('Error al conectar con la API. Reintentando...', 'error')
@@ -381,9 +437,12 @@ function bindEvents() {
     document.addEventListener('click', async e => {
     const btn = e.target.closest('.btn-remove-asset')
     if (!btn) return
-    state.holdings = state.holdings.filter(h => h.coinId !== btn.dataset.coin)
+    const coinId     = btn.dataset.coin
+    const coinSymbol = btn.dataset.symbol || coinId
+    state.holdings   = state.holdings.filter(h => h.coinId !== coinId)
+    state.prices     = {}
     savePortfolio()
-    showToast(`${symbol} eliminado del portfolio`, 'info')
+    showToast(`${coinSymbol} eliminado del portfolio`, 'info')
     await refreshPortfolio()
 })
 
