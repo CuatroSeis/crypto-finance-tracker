@@ -55,63 +55,66 @@
         </div>
 
         <div class="dashboard-grid">
-        <div class="col-left">
-            <div class="glass-card chart-card">
-            <div class="card-header">
-                <h3 class="card-title">Precio histórico</h3>
-                <div class="chart-controls">
-                <button class="btn-period active" data-days="7">7D</button>
-                <button class="btn-period" data-days="30">30D</button>
-                <button class="btn-period" data-days="90">90D</button>
-                </div>
-                <select id="chart-coin-select">
-                <option value="bitcoin">BTC</option>
-                <option value="ethereum">ETH</option>
-                <option value="solana">SOL</option>
-                </select>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="price-chart"></canvas>
-            </div>
-            </div>
+<div class="col-left">
 
-            <div class="glass-card">
-            <h3 class="card-title">Top coins</h3>
-            <div class="coin-list" id="coin-list">
-                <div class="skeleton-row"></div>
-                <div class="skeleton-row"></div>
-                <div class="skeleton-row"></div>
-                <div class="skeleton-row"></div>
-            </div>
-            </div>
-            <!-- FEAR & GREED -->
-<div class="glass-card fear-greed-card">
-    <div class="card-header" style="margin-bottom:0;">
-    <h3 class="card-title" style="margin-bottom:0;">Fear & Greed Index</h3>
-    <span class="nav-status" style="margin-left:auto;">
-        <span class="status-dot"></span>
-        <span class="status-text" style="font-size:11px;">alternative.me</span>
-    </span>
+    <!-- CHART -->
+    <div class="glass-card chart-card">
+    <div class="card-header">
+        <h3 class="card-title">Precio histórico</h3>
+        <div class="chart-controls">
+        <button class="btn-period active" data-days="7">7D</button>
+        <button class="btn-period" data-days="30">30D</button>
+        <button class="btn-period" data-days="90">90D</button>
+        </div>
+        <select id="chart-coin-select">
+        <option value="bitcoin">BTC</option>
+        <option value="ethereum">ETH</option>
+        <option value="solana">SOL</option>
+        </select>
+    </div>
+    <div class="chart-wrapper">
+        <canvas id="price-chart"></canvas>
+    </div>
     </div>
 
-    <div class="fg-layout">
+    <!-- TOP COINS + FEAR & GREED side by side -->
+    <div class="bottom-widgets">
 
-    <!-- Gauge -->
-    <div class="fg-gauge-wrap">
-        <canvas id="fg-gauge" width="200" height="110"></canvas>
-        <div class="fg-center">
-        <p class="fg-value" id="fg-value">—</p>
-        <p class="fg-label" id="fg-label">—</p>
+    <div class="glass-card">
+        <h3 class="card-title">Top coins</h3>
+        <div class="coin-list" id="coin-list">
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
         </div>
     </div>
 
-    <!-- Historial 7 días -->
-    <div class="fg-history">
-        <p class="fg-history-title">Últimos 7 días</p>
-        <div id="fg-history-list"></div>
+    <div class="glass-card fear-greed-card">
+        <div class="card-header" style="margin-bottom:0;">
+        <h3 class="card-title" style="margin-bottom:0;">Fear & Greed</h3>
+        <span class="nav-status" style="margin-left:auto;">
+            <span class="status-dot"></span>
+            <span class="status-text" style="font-size:11px;">alternative.me</span>
+        </span>
+        </div>
+        <div class="fg-layout">
+        <div class="fg-gauge-wrap">
+            <canvas id="fg-gauge" width="200" height="110"></canvas>
+            <div class="fg-center">
+            <p class="fg-value" id="fg-value">—</p>
+            <p class="fg-label" id="fg-label">—</p>
+            </div>
+        </div>
+        <div class="fg-history">
+            <p class="fg-history-title">Últimos 7 días</p>
+            <div id="fg-history-list"></div>
+        </div>
+        </div>
     </div>
 
     </div>
+
 </div>
         </div>
 

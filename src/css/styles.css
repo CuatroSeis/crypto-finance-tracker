@@ -904,11 +904,11 @@ body {
 .fear-greed-card { padding: 20px; }
 
 .fg-layout {
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     margin-top: 16px;
-    align-items: start;
+    align-items: center;
 }
 
 .fg-gauge-wrap {
@@ -974,4 +974,20 @@ body {
 @media (max-width: 700px) {
     .fg-layout { grid-template-columns: 1fr; }
     .fg-gauge-wrap { margin: 0 auto; }
+}
+
+/* =====================
+    BOTTOM WIDGETS GRID
+   ===================== */
+.bottom-widgets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .bottom-widgets {
+    grid-template-columns: 1fr;
+    }
 }
