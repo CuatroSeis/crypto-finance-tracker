@@ -194,19 +194,31 @@ export function renderPortfolio(holdings, prices, state) {
 //  4. Convertidor
 // ------------------------------------------------------------
 export function renderConversion(amount, fromId, toCurrency, prices) {
-    const price  = prices[fromId]?.[toCurrency] || 0
+    if (!prices[fromId]) return
+
+    const price  = prices[fromId][toCurrency] || 0
   const result = amount * price
 
-    const symbols = { usd: '$', eur: '€', ars: '$' }
-    const prefix  = symbols[toCurrency] || ''
+    const currencySymbols = { usd: '$', eur: '€', ars: '$' }
+    const currencyNames   = { usd: 'USD', eur: 'EUR', ars: 'ARS' }
+    const prefix          = currencySymbols[toCurrency] || ''
+    const suffix          = currencyNames[toCurrency]   || toCurrency.toUpperCase()
 
-    document.getElementById('conv-result').textContent =
-    `${prefix}${result.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+    const resultEl = document.getElementById('conv-result')
+    const rateEl   = document.getElementById('conv-rate')
 
-    document.getElementById('conv-rate').textContent =
-    `1 ${fromId.toUpperCase().slice(0,3)} = ${prefix}${price.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${toCurrency.toUpperCase()}`
+  // Salir silenciosamente si los elementos no existen en el DOM actual
+    if (!resultEl || !rateEl) return
+
+    resultEl.textContent = `${prefix}${result.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+    })}`
+
+    rateEl.textContent = `1 ${fromId.charAt(0).toUpperCase() + fromId.slice(1)} = ${prefix}${price.toLocaleString('en-US', {
+    maximumFractionDigits: 2
+    })} ${suffix}`
 }
-
 // ------------------------------------------------------------
 //  Conversiones rápidas (vista Converter)
 // ------------------------------------------------------------
@@ -319,6 +331,206 @@ export function renderPortfolioSummary(holdings, prices) {
             <p style="font-size:12px; font-weight:500; color:var(--text-primary);">${formatUSD(value)}</p>
             <p style="font-size:10px; color:var(--text-muted);">${pct.toFixed(1)}%</p>
         </div>
+        </div>
+    `
+    }).join('')
+}
+
+// ------------------------------------------------------------
+//  Skeletons
+// ------------------------------------------------------------
+export function showStatCardSkeletons() {
+    const ids = ['market-cap', 'volume', 'btc-dominance', 'portfolio-total']
+    ids.forEach(id => {
+    const el = document.getElementById(id)
+    if (!el) return
+    el.innerHTML = `<div class="skeleton skeleton-value"></div>`
+    })
+    ;['market-cap-change', 'volume-change', 'dominance-change', 'portfolio-change'].forEach(id => {
+    const el = document.getElementById(id)
+    if (el) el.innerHTML = `<div class="skeleton skeleton-text short"></div>`
+    })
+}
+
+export function showCoinListSkeleton() {
+    const container = document.getElementById('coin-list')
+    if (!container) return
+    container.innerHTML = Array(4).fill('').map(() => `
+    <div class="skeleton-coin-row">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+        <div class="skeleton skeleton-text mid"></div>
+        <div class="skeleton skeleton-text short"></div>
+        </div>
+        <div style="text-align:right; width:80px;">
+        <div class="skeleton skeleton-text wide"></div>
+        <div class="skeleton skeleton-text mid"></div>
+        </div>
+    </div>
+    `).join('')
+}
+
+export function showChartSkeleton() {
+    const wrapper = document.querySelector('.chart-wrapper')
+    if (!wrapper) return
+    wrapper.innerHTML = `<div class="skeleton skeleton-chart"></div>`
+}
+
+export function showPortfolioSkeleton() {
+    const container = document.getElementById('portfolio-summary')
+    if (!container) return
+    container.innerHTML = Array(2).fill('').map(() => `
+    <div class="skeleton-coin-row">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+        <div class="skeleton skeleton-text mid"></div>
+        </div>
+        <div style="width:70px; text-align:right;">
+        <div class="skeleton skeleton-text wide"></div>
+        </div>
+    </div>
+    `).join('')
+}
+
+// ------------------------------------------------------------
+//  Toast notifications
+// ------------------------------------------------------------
+function getToastContainer() {
+    let container = document.getElementById('toast-container')
+    if (!container) {
+    container = document.createElement('div')
+    container.id = 'toast-container'
+    container.className = 'toast-container'
+    document.body.appendChild(container)
+    }
+    return container
+}
+
+const TOAST_ICONS = { success: '✓', error: '✕', info: 'i' }
+
+export function showToast(message, type = 'info', duration = 3500) {
+    const container = getToastContainer()
+    const toast     = document.createElement('div')
+    toast.className = `toast ${type}`
+    toast.innerHTML = `
+    <span class="toast-icon">${TOAST_ICONS[type] || 'i'}</span>
+    <span class="toast-msg">${message}</span>
+    <button class="toast-close" aria-label="Cerrar">✕</button>
+    `
+    const remove = () => {
+    toast.classList.add('toast-out')
+    toast.addEventListener('animationend', () => toast.remove(), { once: true })
+    }
+    toast.querySelector('.toast-close').addEventListener('click', remove)
+    container.appendChild(toast)
+    setTimeout(remove, duration)
+}
+
+// ------------------------------------------------------------
+//  Donut chart del portfolio
+// ------------------------------------------------------------
+let donutInstance = null
+
+const DONUT_COLORS = {
+    bitcoin:     '#f59e0b',
+    ethereum:    '#818cf8',
+    solana:      '#34d399',
+    binancecoin: '#eab308',
+}
+
+// Color de fallback para coins no conocidas
+function getCoinColor(coinId, index) {
+    const fallbacks = ['#a78bfa', '#60a5fa', '#f87171', '#34d399', '#fb923c']
+    return DONUT_COLORS[coinId] || fallbacks[index % fallbacks.length]
+}
+
+export function renderDonutChart(holdings, prices) {
+    const canvas = document.getElementById('portfolio-chart')
+    if (!canvas) return
+
+  // Estado vacío
+    if (holdings.length === 0) {
+    if (donutInstance) {
+        donutInstance.destroy()
+        donutInstance = null
+    }
+    const centerValue = document.getElementById('donut-total')
+    const legend      = document.getElementById('donut-legend')
+    if (centerValue) centerValue.textContent = '$0.00'
+    if (legend)      legend.innerHTML = `
+        <p style="font-size:12px; color:var(--text-muted); text-align:center;">
+        Sin activos en el portfolio.
+        </p>`
+    return
+    }
+
+  // Calcular valores
+    const data = holdings.map((h, i) => {
+    const price = prices[h.coinId]?.usd || 0
+    const value = price * h.amount
+    return {
+        coinId: h.coinId,
+        symbol: h.symbol,
+        value,
+        color: getCoinColor(h.coinId, i),
+    }
+    })
+
+    const total = data.reduce((acc, d) => acc + d.value, 0)
+
+  // Actualizar valor central
+    const centerValue = document.getElementById('donut-total')
+    if (centerValue) centerValue.textContent = formatUSD(total)
+
+  // Destruir instancia anterior si existe
+    if (donutInstance) {
+    donutInstance.destroy()
+    donutInstance = null
+    }
+
+  // Crear chart
+    donutInstance = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels:   data.map(d => d.symbol),
+        datasets: [{
+        data:             data.map(d => d.value),
+        backgroundColor: data.map(d => d.color),
+        borderColor:     '#0a0a15',
+        borderWidth:     3,
+        hoverOffset:     6,
+        }]
+    },
+    options: {
+        responsive:          false,
+        maintainAspectRatio: false,
+        cutout:              '72%',
+        plugins: {
+        legend: { display: false },
+        tooltip: {
+            callbacks: {
+            label: ctx => {
+              const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0
+                return ` ${ctx.label}: ${formatUSD(ctx.parsed)} (${pct}%)`
+            }
+            }
+        }
+        }
+    }
+    })
+
+  // Leyenda personalizada
+    const legend = document.getElementById('donut-legend')
+    if (!legend) return
+
+    legend.innerHTML = data.map(d => {
+    const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : 0
+    return `
+        <div class="legend-item">
+        <div class="legend-dot" style="background:${d.color};"></div>
+        <span class="legend-name">${d.symbol}</span>
+        <span class="legend-pct">${pct}%</span>
+        <span class="legend-value">${formatUSD(d.value)}</span>
         </div>
     `
     }).join('')
