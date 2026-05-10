@@ -194,19 +194,31 @@ export function renderPortfolio(holdings, prices, state) {
 //  4. Convertidor
 // ------------------------------------------------------------
 export function renderConversion(amount, fromId, toCurrency, prices) {
-    const price  = prices[fromId]?.[toCurrency] || 0
+    if (!prices[fromId]) return
+
+    const price  = prices[fromId][toCurrency] || 0
   const result = amount * price
 
-    const symbols = { usd: '$', eur: '€', ars: '$' }
-    const prefix  = symbols[toCurrency] || ''
+    const currencySymbols = { usd: '$', eur: '€', ars: '$' }
+    const currencyNames   = { usd: 'USD', eur: 'EUR', ars: 'ARS' }
+    const prefix          = currencySymbols[toCurrency] || ''
+    const suffix          = currencyNames[toCurrency]   || toCurrency.toUpperCase()
 
-    document.getElementById('conv-result').textContent =
-    `${prefix}${result.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+    const resultEl = document.getElementById('conv-result')
+    const rateEl   = document.getElementById('conv-rate')
 
-    document.getElementById('conv-rate').textContent =
-    `1 ${fromId.toUpperCase().slice(0,3)} = ${prefix}${price.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${toCurrency.toUpperCase()}`
+  // Salir silenciosamente si los elementos no existen en el DOM actual
+    if (!resultEl || !rateEl) return
+
+    resultEl.textContent = `${prefix}${result.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+    })}`
+
+    rateEl.textContent = `1 ${fromId.charAt(0).toUpperCase() + fromId.slice(1)} = ${prefix}${price.toLocaleString('en-US', {
+    maximumFractionDigits: 2
+    })} ${suffix}`
 }
-
 // ------------------------------------------------------------
 //  Conversiones rápidas (vista Converter)
 // ------------------------------------------------------------

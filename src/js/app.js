@@ -271,39 +271,35 @@ function openAddAssetModal() {
 // ------------------------------------------------------------
 async function loadDashboard() {
     try {
-    // 1. Mostrar skeletons inmediatamente
     showStatCardSkeletons()
     showCoinListSkeleton()
     showChartSkeleton()
-    showPortfolioSkeleton()
 
-    // 2. Restaurar canvas antes de init (skeleton lo reemplazó)
+    const wrapper = document.querySelector('.chart-wrapper')
+    if (wrapper && !wrapper.querySelector('canvas')) {
+        wrapper.innerHTML = '<canvas id="price-chart"></canvas>'
+    }
     initChart()
 
-    // 3. Fetch en paralelo
-    const [globalData, coinsData, historyData, prices] = await Promise.all([
+    const [results] = await Promise.all([
+        Promise.all([
         getGlobalData(),
         getCoinsMarket(state.coins),
         getCoinHistory(state.chartCoin, state.chartDays),
         getSimplePrices(
-        ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
-        ['usd', 'eur', 'ars']
+            ['bitcoin', 'ethereum', 'solana', 'binancecoin'],
+            ['usd', 'eur', 'ars']
         ),
+        ]),
+        new Promise(r => setTimeout(r, 800))
     ])
 
+    const [globalData, coinsData, historyData, prices] = results
     state.prices = prices
 
-    // 4. Reemplazar skeletons con datos reales
     renderGlobalStats(globalData)
     renderCoinList(coinsData)
     updateChartWithData(historyData)
-    renderPortfolioSummary(state.holdings, prices)
-    renderConversion(
-        parseFloat(document.getElementById('conv-amount')?.value) || 1,
-        document.getElementById('conv-from')?.value || 'bitcoin',
-        document.getElementById('conv-to')?.value   || 'usd',
-        prices
-    )
 
     } catch (err) {
     console.error('Error cargando dashboard:', err)
