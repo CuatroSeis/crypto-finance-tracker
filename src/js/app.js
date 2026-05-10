@@ -2,12 +2,12 @@
 //  app.js — Punto de entrada y orquestador principal
 // ============================================================
 
-import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices } from './api.js'
 import { initRouter, onEnter } from './router.js'
 // Agregar al import de ui.js
-import { renderGlobalStats, renderCoinList, renderPortfolio,renderPortfolioSummary, renderConversion, renderQuickConversions,renderPricesGrid, renderDonutChart, showStatCardSkeletons,showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, showToast,
+import { renderGlobalStats, renderCoinList, renderPortfolio,renderPortfolioSummary, renderConversion, renderQuickConversions,renderPricesGrid, renderDonutChart, renderFearGreed,showStatCardSkeletons,showCoinListSkeleton, showChartSkeleton, showPortfolioSkeleton, showToast,
 } from './ui.js'
 import { createCoinSearch } from './search.js'
+import { getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices, searchCoins, getFearGreedIndex } from './api.js'
 
 // ------------------------------------------------------------
 //  Estado de la app
