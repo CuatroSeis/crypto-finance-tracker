@@ -413,3 +413,113 @@ export function showToast(message, type = 'info', duration = 3500) {
     container.appendChild(toast)
     setTimeout(remove, duration)
 }
+
+// ------------------------------------------------------------
+//  Donut chart del portfolio
+// ------------------------------------------------------------
+let donutInstance = null
+
+const DONUT_COLORS = {
+    bitcoin:     '#f59e0b',
+    ethereum:    '#818cf8',
+    solana:      '#34d399',
+    binancecoin: '#eab308',
+}
+
+// Color de fallback para coins no conocidas
+function getCoinColor(coinId, index) {
+    const fallbacks = ['#a78bfa', '#60a5fa', '#f87171', '#34d399', '#fb923c']
+    return DONUT_COLORS[coinId] || fallbacks[index % fallbacks.length]
+}
+
+export function renderDonutChart(holdings, prices) {
+    const canvas = document.getElementById('portfolio-chart')
+    if (!canvas) return
+
+  // Estado vacío
+    if (holdings.length === 0) {
+    if (donutInstance) {
+        donutInstance.destroy()
+        donutInstance = null
+    }
+    const centerValue = document.getElementById('donut-total')
+    const legend      = document.getElementById('donut-legend')
+    if (centerValue) centerValue.textContent = '$0.00'
+    if (legend)      legend.innerHTML = `
+        <p style="font-size:12px; color:var(--text-muted); text-align:center;">
+        Sin activos en el portfolio.
+        </p>`
+    return
+    }
+
+  // Calcular valores
+    const data = holdings.map((h, i) => {
+    const price = prices[h.coinId]?.usd || 0
+    const value = price * h.amount
+    return {
+        coinId: h.coinId,
+        symbol: h.symbol,
+        value,
+        color: getCoinColor(h.coinId, i),
+    }
+    })
+
+    const total = data.reduce((acc, d) => acc + d.value, 0)
+
+  // Actualizar valor central
+    const centerValue = document.getElementById('donut-total')
+    if (centerValue) centerValue.textContent = formatUSD(total)
+
+  // Destruir instancia anterior si existe
+    if (donutInstance) {
+    donutInstance.destroy()
+    donutInstance = null
+    }
+
+  // Crear chart
+    donutInstance = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels:   data.map(d => d.symbol),
+        datasets: [{
+        data:             data.map(d => d.value),
+        backgroundColor: data.map(d => d.color),
+        borderColor:     '#0a0a15',
+        borderWidth:     3,
+        hoverOffset:     6,
+        }]
+    },
+    options: {
+        responsive:          false,
+        maintainAspectRatio: false,
+        cutout:              '72%',
+        plugins: {
+        legend: { display: false },
+        tooltip: {
+            callbacks: {
+            label: ctx => {
+              const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0
+                return ` ${ctx.label}: ${formatUSD(ctx.parsed)} (${pct}%)`
+            }
+            }
+        }
+        }
+    }
+    })
+
+  // Leyenda personalizada
+    const legend = document.getElementById('donut-legend')
+    if (!legend) return
+
+    legend.innerHTML = data.map(d => {
+    const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : 0
+    return `
+        <div class="legend-item">
+        <div class="legend-dot" style="background:${d.color};"></div>
+        <span class="legend-name">${d.symbol}</span>
+        <span class="legend-pct">${pct}%</span>
+        <span class="legend-value">${formatUSD(d.value)}</span>
+        </div>
+    `
+    }).join('')
+}
