@@ -153,21 +153,30 @@ export function renderPortfolio(holdings, prices, state) {
 
   // Renderizar filas
     container.innerHTML = rows.map(r => {
-    const meta  = COIN_COLORS[r.coinId] || { color: '#9ca3af' }
+    const color = COIN_COLORS[r.coinId]?.color || getCoinColor(r.coinId, rows.indexOf(r))
+    const meta  = { color }
     const isUp  = r.pnl >= 0
     const pct   = totalValue > 0 ? (r.value / totalValue) * 100 : 0
 
     return `
-        <div class="portfolio-row">
-        <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:13px; font-weight:500; color:${meta.color};">${r.symbol}</span>
-            <div class="portfolio-bar-track" style="width:60px;">
+    <div class="portfolio-row">
+    <div style="display:flex; align-items:center; gap:8px;">
+        ${r.thumb
+        ? `<img src="${r.thumb}" alt="${r.symbol}"
+                style="width:24px; height:24px; border-radius:50%; flex-shrink:0;" />`
+        : `<div style="width:24px; height:24px; border-radius:50%; flex-shrink:0;
+                        background:${color}22; border:1px solid ${color};"></div>`
+        }
+        <div>
+        <span style="font-size:13px; font-weight:500; color:${color};">${r.symbol}</span>
+        <div class="portfolio-bar-track" style="width:50px; margin-top:3px;">
             <div class="portfolio-bar-fill"
-                    style="width:${pct.toFixed(1)}%; background:${meta.color};">
-            </div>
-            </div>
+                style="width:${pct.toFixed(1)}%; background:${color};"></div>
         </div>
-        <span style="color:var(--text-secondary);">${r.amount}</span>
+        </div>
+    </div>
+    <span style="color:var(--text-secondary);">${r.amount}</span>
+    ...
         <span style="color:var(--text-secondary);">${formatUSD(r.buyPrice || 0)}</span>
         <span style="color:var(--text-primary);">${formatUSD(r.currentPrice)}</span>
         <span style="color:var(--text-primary); font-weight:500;">${formatUSD(r.value)}</span>
@@ -189,6 +198,7 @@ export function renderPortfolio(holdings, prices, state) {
     `
     }).join('')
 }
+
 
 // ------------------------------------------------------------
 //  4. Convertidor
