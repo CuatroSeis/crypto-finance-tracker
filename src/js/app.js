@@ -161,13 +161,20 @@ function savePortfolio() {
 }
 
 async function refreshPortfolio() {
+  // Siempre renderizar, incluso con 0 activos
     if (state.holdings.length === 0) {
     renderPortfolio([], {}, state)
+    renderPortfolioSummary([], {})
+    document.getElementById('portfolio-total').textContent  = '$0.00'
+    document.getElementById('portfolio-change').textContent = '—'
     return
     }
+
     const ids    = state.holdings.map(h => h.coinId)
     const prices = await getSimplePrices(ids, ['usd'])
+    state.prices = prices
     renderPortfolio(state.holdings, prices, state)
+    renderPortfolioSummary(state.holdings, prices)
 }
 
 function openAddAssetModal() {
@@ -374,13 +381,11 @@ function bindEvents() {
     document.addEventListener('click', async e => {
     const btn = e.target.closest('.btn-remove-asset')
     if (!btn) return
-    const coin     = btn.dataset.coin
-    const symbol   = btn.dataset.symbol || coin
-    state.holdings = state.holdings.filter(h => h.coinId !== coin)
+    state.holdings = state.holdings.filter(h => h.coinId !== btn.dataset.coin)
     savePortfolio()
     showToast(`${symbol} eliminado del portfolio`, 'info')
     await refreshPortfolio()
-    })
+})
 
 
 // ------------------------------------------------------------
