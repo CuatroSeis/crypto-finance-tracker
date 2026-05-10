@@ -436,9 +436,12 @@ function bindEvents() {
     document.addEventListener('click', async e => {
     const btn = e.target.closest('.btn-remove-asset')
     if (!btn) return
-    state.holdings = state.holdings.filter(h => h.coinId !== btn.dataset.coin)
+    const coinId     = btn.dataset.coin
+    const coinSymbol = btn.dataset.symbol || coinId
+    state.holdings   = state.holdings.filter(h => h.coinId !== coinId)
+    state.prices     = {}
     savePortfolio()
-    showToast(`${symbol} eliminado del portfolio`, 'info')
+    showToast(`${coinSymbol} eliminado del portfolio`, 'info')
     await refreshPortfolio()
 })
 
