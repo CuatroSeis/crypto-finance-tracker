@@ -3,14 +3,15 @@
 // ============================================================
 
 import { initRouter, onEnter } from './router.js'
-import {
-    renderGlobalStats, renderCoinList, renderPortfolio, renderPortfolioSummary,
-    renderConversion, renderQuickConversions, renderPricesGrid, renderDonutChart,
-    renderFearGreed, renderComparatorChart, renderComparatorMetrics,
-    showStatCardSkeletons, showCoinListSkeleton, showChartSkeleton,
-    showPortfolioSkeleton, showToast,
+
+import { renderGlobalStats, renderCoinList, renderPortfolio, renderPortfolioSummary,renderConversion, renderQuickConversions, renderPricesGrid, renderDonutChart,
+renderFearGreed, renderComparatorChart, renderComparatorMetrics,
+showStatCardSkeletons, showCoinListSkeleton, showChartSkeleton,
+showPortfolioSkeleton, showToast, showErrorState, showComparatorPlaceholder,
 } from './ui.js'
+
 import { createCoinSearch } from './search.js'
+
 import {
     getGlobalData, getCoinsMarket, getCoinHistory, getSimplePrices,
     getFearGreedIndex, getCoinDetails,
@@ -295,10 +296,11 @@ async function loadDashboard() {
 
     } catch (err) {
     console.error('Error cargando dashboard:', err)
-    showToast('Error al conectar con la API. Reintentando...', 'error')
+    showErrorState('coin-list', 'No se pudieron cargar los precios.', loadDashboard)
+    showErrorState('fg-history-list', 'No se pudo cargar el índice.', null)
+    showToast('Error al conectar con la API', 'error')
     }
 }
-
 // ------------------------------------------------------------
 //  Vista Converter
 // ------------------------------------------------------------
@@ -312,14 +314,17 @@ async function loadConverterView() {
     await updateFullConverter()
     } catch (err) {
     console.error('Error cargando converter:', err)
+    showErrorState('conv-reference-table', 'No se pudieron cargar los precios.', loadConverterView)
     showToast('Error al cargar el convertidor', 'error')
     }
 }
-
 // ------------------------------------------------------------
 //  Vista Comparador
 // ------------------------------------------------------------
 async function loadComparatorView() {
+  // Mostrar placeholder inicial
+    showComparatorPlaceholder()
+
     const containerA = document.getElementById('comp-search-a')
     const containerB = document.getElementById('comp-search-b')
 
@@ -350,17 +355,17 @@ async function loadComparatorView() {
     }
 }
 
-function updateCompPreview(side, coin) {
-    const preview = document.getElementById(`comp-preview-${side}`)
-    if (!preview) return
-        preview.innerHTML = coin.thumb
-    ? `<img src="${coin.thumb}" alt="${coin.symbol}" style="width:24px;height:24px;border-radius:50%;"/> <span>${coin.name} (${coin.symbol})</span>`
-    : `<span>${coin.name} (${coin.symbol})</span>`
-}
-
 async function tryLoadComparison() {
     const { compCoinA, compCoinB, compDays } = state
     if (!compCoinA || !compCoinB) return
+
+  // Skeleton en el chart wrapper
+    const wrapper = document.querySelector('#view-comparator .chart-wrapper')
+    if (wrapper) {
+    wrapper.innerHTML = `
+        <div class="skeleton skeleton-chart" style="height:250px;"></div>
+    `
+    }
 
     try {
     showToast(`Comparando ${compCoinA.symbol} vs ${compCoinB.symbol}...`, 'info', 2000)
@@ -372,11 +377,18 @@ async function tryLoadComparison() {
         getCoinDetails(compCoinB.id),
     ])
 
+    // Restaurar canvas antes de renderizar
+    if (wrapper) wrapper.innerHTML = '<canvas id="comp-chart"></canvas>'
+
     renderComparatorChart(histA, histB, compCoinA, compCoinB, compDays)
     renderComparatorMetrics(detailsA, detailsB)
 
     } catch (err) {
     console.error('Error en comparador:', err)
+    if (wrapper) {
+        wrapper.innerHTML = ''
+        showErrorState('comp-metrics', 'No se pudo cargar la comparación.', tryLoadComparison)
+    }
     showToast('Error al cargar la comparación', 'error')
     }
 }
