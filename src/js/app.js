@@ -142,12 +142,27 @@ async function refreshPortfolio() {
     if (changeEl) changeEl.textContent = '—'
     return
     }
-    const ids    = state.holdings.map(h => h.coinId)
+
+  // Traer precios de TODAS las coins del portfolio, sin importar cuáles son
+    const ids = [...new Set(state.holdings.map(h => h.coinId))]
+
+  // Actualizar state.coins para incluir coins dinámicas
+    ids.forEach(id => {
+    if (!state.coins.includes(id)) state.coins.push(id)
+    })
+
+    try {
     const prices = await getSimplePrices(ids, ['usd'])
     state.prices = prices
+
     renderPortfolio(state.holdings, prices, state)
     renderPortfolioSummary(state.holdings, prices)
     renderDonutChart(state.holdings, prices)
+
+    } catch (err) {
+    console.error('Error actualizando portfolio:', err)
+    showToast('Error al actualizar precios del portfolio', 'error')
+    }
 }
 
 function openAddAssetModal() {
@@ -467,6 +482,11 @@ function bindEvents() {
 //  Init
 // ------------------------------------------------------------
 async function init() {
+  // Sincronizar coins del portfolio guardado en localStorage
+    state.holdings.forEach(h => {
+    if (!state.coins.includes(h.coinId)) state.coins.push(h.coinId)
+    })
+
     onEnter('dashboard',  loadDashboard)
     onEnter('portfolio',  refreshPortfolio)
     onEnter('converter',  loadConverterView)
@@ -480,5 +500,3 @@ async function init() {
     if (active === 'view-dashboard') loadDashboard()
     }, 60_000)
 }
-
-init()
