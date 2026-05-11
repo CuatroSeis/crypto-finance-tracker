@@ -500,3 +500,5 @@ async function init() {
     if (active === 'view-dashboard') loadDashboard()
     }, 60_000)
 }
+
+init()

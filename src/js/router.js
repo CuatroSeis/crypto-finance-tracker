@@ -4,43 +4,40 @@
 
 const VIEWS = ['dashboard', 'portfolio', 'converter', 'comparator']
 
-// Callbacks que se ejecutan cuando se entra a una vista
 const onEnterCallbacks = {}
 
 export function onEnter(view, callback) {
-    onEnterCallbacks[view] = callback
+  onEnterCallbacks[view] = callback
 }
 
 function activateView(viewName) {
-    if (!VIEWS.includes(viewName)) viewName = 'dashboard'
+  if (!VIEWS.includes(viewName)) viewName = 'dashboard'
 
-  // Mostrar/ocultar secciones
-    VIEWS.forEach(v => {
+  VIEWS.forEach(v => {
     const section = document.getElementById(`view-${v}`)
     const link    = document.querySelector(`[data-view="${v}"]`)
     if (!section || !link) return
 
     if (v === viewName) {
-        section.classList.add('active')
-        link.classList.add('active')
+      section.classList.add('active')
+      link.classList.add('active')
     } else {
-        section.classList.remove('active')
-        link.classList.remove('active')
+      section.classList.remove('active')
+      link.classList.remove('active')
     }
-    })
+  })
 
-  // Actualizar URL sin recargar
-    history.pushState({ view: viewName }, '', `/${viewName}`)
-    document.title = `CryptoTrack — ${viewName.charAt(0).toUpperCase() + viewName.slice(1)}`
+  // Hash routing — funciona en local y en deploy
+  window.location.hash = viewName
+  document.title = `CryptoTrack — ${viewName.charAt(0).toUpperCase() + viewName.slice(1)}`
 
-  // Ejecutar callback de la vista si existe
-    if (onEnterCallbacks[viewName]) {
+  if (onEnterCallbacks[viewName]) {
     onEnterCallbacks[viewName]()
-    }
+  }
 }
 
 export function initRouter() {
-  // Delegación global en vez de bindear cada link
+  // Clicks en navbar
   document.addEventListener('click', e => {
     const link = e.target.closest('[data-view]')
     if (!link) return
@@ -48,14 +45,17 @@ export function initRouter() {
     activateView(link.dataset.view)
   })
 
+  // Botones internos
   document.getElementById('btn-go-portfolio')?.addEventListener('click', () => activateView('portfolio'))
   document.getElementById('btn-go-converter')?.addEventListener('click', () => activateView('converter'))
 
-  window.addEventListener('popstate', e => {
-    const view = e.state?.view || 'dashboard'
+  // Botón atrás del browser
+  window.addEventListener('hashchange', () => {
+    const view = window.location.hash.replace('#', '') || 'dashboard'
     activateView(view)
   })
 
-  const initial = window.location.pathname.replace('/', '') || 'dashboard'
+  // Vista inicial desde el hash
+  const initial = window.location.hash.replace('#', '') || 'dashboard'
   activateView(initial)
 }
