@@ -822,3 +822,46 @@ export function renderComparatorMetrics(detailsA, detailsB) {
     renderCard(detailsA, '#a78bfa') +
     renderCard(detailsB, '#60a5fa')
 }
+
+// ------------------------------------------------------------
+//  Error states
+// ------------------------------------------------------------
+export function showErrorState(containerId, message, onRetry) {
+    const container = document.getElementById(containerId)
+    if (!container) return
+
+    container.innerHTML = `
+    <div class="error-state">
+        <div class="error-state-icon">⚠️</div>
+        <p class="error-state-title">Algo salió mal</p>
+        <p class="error-state-desc">${message}</p>
+        ${onRetry
+        ? `<button class="error-state-btn" id="retry-${containerId}">
+                Reintentar
+            </button>`
+        : ''
+        } 
+    </div>
+    `
+
+    if (onRetry) {
+    document.getElementById(`retry-${containerId}`)
+        ?.addEventListener('click', onRetry)
+    }
+}
+
+export function showComparatorPlaceholder() {
+    const canvas = document.getElementById('comp-chart')
+    if (!canvas) return
+
+    const wrapper = canvas.closest('.chart-wrapper')
+    if (!wrapper) return
+
+    wrapper.innerHTML = `
+    <div class="comp-placeholder">
+        <div class="comp-placeholder-icon">📊</div>
+        <p class="comp-placeholder-title">Seleccioná dos coins para comparar</p>
+        <p class="comp-placeholder-desc">Usá los buscadores de arriba para elegir Coin A y Coin B</p>
+    </div>
+    `
+}
