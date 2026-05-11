@@ -76,3 +76,13 @@ export async function getFearGreedIndex() {
     const data = await response.json()
   return data.data // array de 7 días, [0] es hoy
 }
+
+// ------------------------------------------------------------
+//  7. Datos detallados de una coin para el comparador
+//     @param {string} coinId — 'bitcoin' | 'ethereum' ...
+// ------------------------------------------------------------
+export async function getCoinDetails(coinId) {
+    return fetchJSON(
+    `/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false`
+    )
+}
