@@ -2,7 +2,7 @@
 //  router.js — SPA navigation sin librerías
 // ============================================================
 
-const VIEWS = ['dashboard', 'portfolio', 'converter']
+const VIEWS = ['dashboard', 'portfolio', 'converter', 'comparator']
 
 // Callbacks que se ejecutan cuando se entra a una vista
 const onEnterCallbacks = {}
@@ -40,26 +40,22 @@ function activateView(viewName) {
 }
 
 export function initRouter() {
-  // Clicks en la navbar
-    document.querySelectorAll('[data-view]').forEach(link => {
-    link.addEventListener('click', e => {
-        e.preventDefault()
-        const view = link.dataset.view
-        activateView(view)
-    })
-    })
+  // Delegación global en vez de bindear cada link
+  document.addEventListener('click', e => {
+    const link = e.target.closest('[data-view]')
+    if (!link) return
+    e.preventDefault()
+    activateView(link.dataset.view)
+  })
 
-  // Botones "Ver completo" del dashboard
-    document.getElementById('btn-go-portfolio')?.addEventListener('click', () => activateView('portfolio'))
-    document.getElementById('btn-go-converter')?.addEventListener('click', () => activateView('converter'))
+  document.getElementById('btn-go-portfolio')?.addEventListener('click', () => activateView('portfolio'))
+  document.getElementById('btn-go-converter')?.addEventListener('click', () => activateView('converter'))
 
-  // Manejar el botón atrás del browser
-    window.addEventListener('popstate', e => {
+  window.addEventListener('popstate', e => {
     const view = e.state?.view || 'dashboard'
     activateView(view)
-    })
+  })
 
-  // Vista inicial según la URL
-    const initial = window.location.pathname.replace('/', '') || 'dashboard'
-    activateView(initial)
+  const initial = window.location.pathname.replace('/', '') || 'dashboard'
+  activateView(initial)
 }
