@@ -339,9 +339,6 @@ async function loadConverterView() {
 //  Vista Comparador
 // ------------------------------------------------------------
 async function loadComparatorView() {
-  // Mostrar placeholder inicial
-    showComparatorPlaceholder()
-
     const containerA = document.getElementById('comp-search-a')
     const containerB = document.getElementById('comp-search-b')
 
@@ -355,7 +352,7 @@ async function loadComparatorView() {
         updateCompPreview('a', coin)
         tryLoadComparison()
         }
-    })
+        })
     }
 
     if (containerB && !containerB.dataset.mounted) {
@@ -370,7 +367,36 @@ async function loadComparatorView() {
         }
     })
     }
+
+  // Si ya había coins seleccionadas, restaurar previews y gráfico
+    if (state.compCoinA) updateCompPreview('a', state.compCoinA)
+    if (state.compCoinB) updateCompPreview('b', state.compCoinB)
+
+    if (state.compCoinA && state.compCoinB) {
+    // Restaurar gráfico sin hacer fetch de nuevo
+    tryLoadComparison()
+    } else {
+    showComparatorPlaceholder()
+    }
+
+    function updateCompPreview(side, coin) {
+    const preview = document.getElementById(`comp-preview-${side}`)
+    if (!preview) return
+
+    preview.innerHTML = coin.thumb
+    ? `<img src="${coin.thumb}" alt="${coin.symbol}"
+            style="width:24px;height:24px;border-radius:50%;"/> 
+        <span>${coin.name} (${coin.symbol})</span>`
+    : `<span>${coin.name} (${coin.symbol})</span>`
+
+  // Restaurar texto en el input del buscador
+    const input = document.querySelector(`#comp-search-${side} .search-input`)
+    if (input && !input.value) {
+    input.value = `${coin.name} (${coin.symbol})`
+    }
 }
+}
+
 
 async function tryLoadComparison() {
     const { compCoinA, compCoinB, compDays } = state
