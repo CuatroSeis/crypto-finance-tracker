@@ -31,6 +31,7 @@ const state = {
     prices:        {},
     chartInstance: null,
     chartReady:    false,
+    lastUpdate:    null,
 }
 
 // ------------------------------------------------------------
@@ -308,6 +309,7 @@ async function loadDashboard() {
     renderCoinList(coinsData)
     updateChartWithData(historyData)
     renderFearGreed(fearGreedData)
+    updateLastUpdateIndicator()
 
     } catch (err) {
     console.error('Error cargando dashboard:', err)
@@ -494,6 +496,7 @@ async function init() {
 
     bindEvents()
     initRouter()
+    startLastUpdateTimer()
 
     setInterval(() => {
     const active = document.querySelector('.view.active')?.id
@@ -502,3 +505,28 @@ async function init() {
 }
 
 init()
+
+// ------------------------------------------------------------
+//  Indicador de última actualización
+// ------------------------------------------------------------
+function updateLastUpdateIndicator() {
+    state.lastUpdate = Date.now()
+}
+
+function startLastUpdateTimer() {
+    const el = document.getElementById('last-update-text')
+    if (!el) return
+
+    setInterval(() => {
+    if (!state.lastUpdate) { el.textContent = '—'; return }
+
+    const seconds = Math.floor((Date.now() - state.lastUpdate) / 1000)
+
+    if (seconds < 10)  el.textContent = 'Actualizado ahora'
+    else if (seconds < 60)  el.textContent = `Hace ${seconds}s`
+    else {
+        const mins = Math.floor(seconds / 60)
+        el.textContent = `Hace ${mins} min`
+    }
+    }, 5000)
+}

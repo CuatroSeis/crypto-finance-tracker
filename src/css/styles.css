@@ -1232,3 +1232,17 @@ body {
 .comp-placeholder-icon { font-size: 32px; margin-bottom: 4px; }
 .comp-placeholder-title { font-size: 14px; color: var(--text-secondary); }
 .comp-placeholder-desc  { font-size: 12px; }
+
+/* =====================
+    LAST UPDATE
+   ===================== */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.last-update {
+    font-size: 11px;
+    color: var(--text-muted);
+}
