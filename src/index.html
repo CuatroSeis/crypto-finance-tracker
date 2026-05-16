@@ -3,26 +3,53 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CryptoTrack</title>
+
+    <!-- SEO -->
+    <title>CryptoTrack — Dashboard de criptomonedas</title>
+    <meta name="description"
+        content="Dashboard de criptomonedas en tiempo real. Seguí precios, gestioná tu portfolio y comparás coins con datos de CoinGecko." />
+    <meta name="author" content="CuatroSeis" />
+
+    <!-- Open Graph — se ve bien al compartir en LinkedIn/WhatsApp -->
+        <meta property="og:title"       content="CryptoTrack — Dashboard de criptomonedas" />
+    <meta property="og:description" content="Precios en tiempo real, portfolio tracker y comparador de coins." />
+    <meta property="og:type"        content="website" />
+    <meta property="og:url"         content="https://cuatroseis.github.io/crypto-finance-tracker/" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary" />
+    <meta name="twitter:title"       content="CryptoTrack" />
+    <meta name="twitter:description" content="Dashboard de criptomonedas en tiempo real." />
+
+    <!-- Favicon SVG inline — no necesita archivo externo -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
     <!-- NAVBAR -->
     <nav class="navbar">
-    <div class="nav-logo">Crypto<span>Track</span></div>
-    <ul class="nav-links">
-        <li><a href="#" data-view="dashboard" class="active">Dashboard</a></li>
-        <li><a href="#" data-view="portfolio">Portfolio</a></li>
-        <li><a href="#" data-view="converter">Converter</a></li>
-    </ul>
-    <div class="nav-status">
-        <span class="status-dot"></span>
-        <span class="status-text">Live</span>
-    </div>
-    </nav>
+        <div class="nav-logo">Crypto<span>Track</span></div>
+        <ul class="nav-links">
+            <li><a href="#" data-view="dashboard" class="active">Dashboard</a></li>
+            <li><a href="#" data-view="portfolio">Portfolio</a></li>
+            <li><a href="#" data-view="converter">Converter</a></li>
+            <li><a href="#" data-view="comparator">Comparar</a></li>
+        </ul>
+        <div class="nav-right">
+            <span class="last-update" id="last-update-text">—</span>
+            <div class="nav-status">
+            <span class="status-dot"></span>
+            <span class="status-text">Live</span>
+            </div>
+        </div>
+</nav>
 
     <main class="main-container">
 
@@ -233,7 +260,7 @@
 
             <div class="converter-big-row">
                 <label class="converter-label">A</label>
-                <div class="converter-big-input">
+                < class="converter-big-input">
                 <p class="conv-full-result" id="conv-full-result">—</p>
                 <select id="conv-full-to">
                     <option value="usd">Dólar (USD)</option>
@@ -242,7 +269,7 @@
                     <option value="bitcoin">Bitcoin (BTC)</option>
                     <option value="ethereum">Ethereum (ETH)</option>
                 </select>
-                </di>
+            </div>
             </div>
 
             <p class="conv-rate" id="conv-full-rate"></p>
@@ -265,6 +292,56 @@
 
     </section>
 
+        <!-- ===================== -->
+    <!--   VISTA: COMPARATOR   -->
+    <!-- ===================== -->
+    <section id="view-comparator" class="view">
+
+        <div class="view-header">
+        <div>
+            <h1 class="view-title">Comparador de coins</h1>
+            <p class="view-subtitle">Analizá dos criptomonedas lado a lado</p>
+        </div>
+        <div class="chart-controls">
+            <button class="btn-period active" data-comp-days="7">7D</button>
+            <button class="btn-period" data-comp-days="30">30D</button>
+            <button class="btn-period" data-comp-days="90">90D</button>
+        </div>
+        </div>
+
+        <!-- Selectores -->
+        <div class="comp-selectors">
+        <div class="glass-card comp-selector-card">
+            <p class="comp-selector-label" style="color:#a78bfa;">Coin A</p>
+            <div id="comp-search-a"></div>
+            <div id="comp-preview-a" class="comp-preview"></div>
+        </div>
+        <div class="comp-vs">VS</div>
+        <div class="glass-card comp-selector-card">
+            <p class="comp-selector-label" style="color:#60a5fa;">Coin B</p>
+            <div id="comp-search-b"></div>
+            <div id="comp-preview-b" class="comp-preview"></div>
+        </div>
+        </div>
+
+        <!-- Chart comparativo -->
+        <div class="glass-card" style="margin-top:16px;">
+        <div class="card-header">
+            <h3 class="card-title" id="comp-chart-title">Seleccioná dos coins para comparar</h3>
+        </div>
+        <div class="chart-wrapper" style="height:250px;">
+            <canvas id="comp-chart"></canvas>
+        </div>
+        </div>
+
+        <!-- Métricas lado a lado -->
+        <div class="comp-metrics-grid" id="comp-metrics">
+        <div class="comp-metrics-empty">
+            <p>Seleccioná dos coins para ver las métricas comparativas.</p>
+        </div>
+        </div>
+
+    </section>
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>

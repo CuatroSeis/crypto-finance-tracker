@@ -651,3 +651,217 @@ export function renderFearGreed(data) {
     `
     }).join('')
 }
+
+// ------------------------------------------------------------
+//  Comparador de coins
+// ------------------------------------------------------------
+let compChartInstance = null
+
+export function renderComparatorChart(dataA, dataB, coinA, coinB, days) {
+    const canvas = document.getElementById('comp-chart')
+    if (!canvas) return
+
+    if (compChartInstance) { compChartInstance.destroy(); compChartInstance = null }
+
+    const format = ts => {
+    const d = new Date(ts)
+    return days <= 7
+        ? d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' })
+        : d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    }
+
+  // Normalizar a % de cambio desde el inicio para comparar en la misma escala
+    const normalize = prices => {
+    const base = prices[0][1]
+    return prices.map(([, p]) => parseFloat(((p - base) / base * 100).toFixed(2)))
+    }
+
+    const labelsA  = dataA.prices.map(([ts]) => format(ts))
+    const valuesA  = normalize(dataA.prices)
+    const valuesB  = normalize(dataB.prices)
+
+    compChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: labelsA,
+        datasets: [
+        {
+            label:           coinA.symbol.toUpperCase(),
+            data:            valuesA,
+            borderColor:     '#a78bfa',
+            backgroundColor: 'rgba(167,139,250,0.06)',
+            borderWidth:     2,
+            pointRadius:     0,
+            fill:            true,
+            tension:         0.4,
+        },
+        {
+            label:           coinB.symbol.toUpperCase(),
+            data:            valuesB,
+            borderColor:     '#60a5fa',
+            backgroundColor: 'rgba(96,165,250,0.06)',
+            borderWidth:     2,
+            pointRadius:     0,
+            fill:            true,
+            tension:         0.4,
+        }
+        ]
+    },
+    options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        plugins: {
+        legend: {
+            display:  true,
+            position: 'top',
+            labels:   { color: '#9ca3af', font: { size: 12 }, boxWidth: 12 }
+        },
+        tooltip: {
+            callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y > 0 ? '+' : ''}${ctx.parsed.y}%`
+            }
+        }
+        },
+        scales: {
+        x: {
+            ticks: { color: '#4b5563', maxTicksLimit: 6, font: { size: 11 } },
+            grid:  { color: '#1e1e3a' },
+        },
+        y: {
+            ticks: {
+            color: '#4b5563',
+            font:  { size: 11 },
+            callback: v => `${v > 0 ? '+' : ''}${v}%`
+            },
+            grid:     { color: '#1e1e3a' },
+            position: 'right',
+        }
+        }
+    }
+    })
+
+  // Título del chart
+    const titleEl = document.getElementById('comp-chart-title')
+    if (titleEl) {
+    titleEl.textContent = `${coinA.name} vs ${coinB.name} — variación %`
+    }
+}
+
+export function renderComparatorMetrics(detailsA, detailsB) {
+    const container = document.getElementById('comp-metrics')
+    if (!container) return
+
+    const md = d => d?.market_data || {}
+
+    const formatVal = (n, isCurrency = true) => {
+    if (!n && n !== 0) return '—'
+    return isCurrency ? formatUSD(n) : n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    }
+
+    const pctClass = n => n >= 0 ? 'up' : 'down'
+    const pctText  = n => n == null ? '—' : `${n >= 0 ? '▲' : '▼'} ${Math.abs(n).toFixed(2)}%`
+
+    const renderCard = (details, color) => {
+    const m = md(details)
+    return `
+        <div class="comp-metric-card" style="border-top: 2px solid ${color};">
+        <div class="comp-metric-header">
+            ${details.image?.small
+            ? `<img src="${details.image.small}" alt="${details.symbol}" />`
+            : ''
+            }
+            <div>
+            <p class="comp-metric-name">${details.name}</p>
+            <p class="comp-metric-symbol">${details.symbol?.toUpperCase()}</p>
+            </div>
+        </div>
+
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Precio actual</span>
+            <span class="comp-metric-value">${formatVal(m.current_price?.usd)}</span>
+        </div>
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Variación 24h</span>
+            <span class="comp-metric-value ${pctClass(m.price_change_percentage_24h)}">
+            ${pctText(m.price_change_percentage_24h)}
+            </span>
+        </div>
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Variación 7d</span>
+            <span class="comp-metric-value ${pctClass(m.price_change_percentage_7d)}">
+            ${pctText(m.price_change_percentage_7d)}
+            </span>
+        </div>
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Variación 30d</span>
+            <span class="comp-metric-value ${pctClass(m.price_change_percentage_30d)}">
+            ${pctText(m.price_change_percentage_30d)}
+            </span>
+        </div>
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Market Cap</span>
+            <span class="comp-metric-value">${formatVal(m.market_cap?.usd)}</span>
+        </div>
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Volumen 24h</span>
+            <span class="comp-metric-value">${formatVal(m.total_volume?.usd)}</span>
+        </div>
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Máx. histórico</span>
+            <span class="comp-metric-value">${formatVal(m.ath?.usd)}</span>
+        </div>
+        <div class="comp-metric-row">
+            <span class="comp-metric-key">Ranking</span>
+            <span class="comp-metric-value">#${details.market_cap_rank || '—'}</span>
+        </div>
+        </div>
+    `
+    }
+
+    container.innerHTML =
+    renderCard(detailsA, '#a78bfa') +
+    renderCard(detailsB, '#60a5fa')
+}
+
+// ------------------------------------------------------------
+//  Error states
+// ------------------------------------------------------------
+export function showErrorState(containerId, message, onRetry) {
+    const container = document.getElementById(containerId)
+    if (!container) return
+
+    container.innerHTML = `
+    <div class="error-state">
+        <div class="error-state-icon">⚠️</div>
+        <p class="error-state-title">Algo salió mal</p>
+        <p class="error-state-desc">${message}</p>
+        ${onRetry
+        ? `<button class="error-state-btn" id="retry-${containerId}">
+                Reintentar
+            </button>`
+        : ''
+        } 
+    </div>
+    `
+
+    if (onRetry) {
+    document.getElementById(`retry-${containerId}`)
+        ?.addEventListener('click', onRetry)
+    }
+}
+
+export function showComparatorPlaceholder() {
+    const canvas = document.getElementById('comp-chart')
+    if (!canvas) return
+
+    const wrapper = canvas.closest('.chart-wrapper')
+    if (!wrapper) return
+
+    wrapper.innerHTML = `
+    <div class="comp-placeholder">
+        <div class="comp-placeholder-icon">📊</div>
+        <p class="comp-placeholder-title">Seleccioná dos coins para comparar</p>
+        <p class="comp-placeholder-desc">Usá los buscadores de arriba para elegir Coin A y Coin B</p>
+    </div>
+    `
+}
