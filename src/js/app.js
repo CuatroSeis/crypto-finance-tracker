@@ -243,26 +243,42 @@ function openAddAssetModal() {
     const amount   = parseFloat(document.getElementById('modal-amount').value)
     const buyPrice = parseFloat(document.getElementById('modal-buy-price').value)
     const errorEl  = document.getElementById('modal-error')
+    const saveBtn  = document.getElementById('modal-save')
 
     if (!selected) {
-        errorEl.textContent = 'Seleccioná una coin de la búsqueda.'
-        errorEl.style.display = 'block'; return
+    errorEl.textContent   = 'Seleccioná una coin de la búsqueda.'
+    errorEl.style.display = 'block'
+    return
     }
+
     if (!amount || amount <= 0 || !buyPrice || buyPrice <= 0) {
-        errorEl.textContent = 'Completá todos los campos correctamente.'
-        errorEl.style.display = 'block'; return
+    errorEl.textContent   = 'Completá todos los campos correctamente.'
+    errorEl.style.display = 'block'
+    return
     }
 
     errorEl.style.display = 'none'
 
+  // Estado de carga en el botón
+    saveBtn.textContent = 'Guardando...'
+    saveBtn.disabled    = true
+    saveBtn.style.opacity = '0.7'
+
+    try {
     const existing = state.holdings.find(h => h.coinId === selected.id)
     if (existing) {
         const total       = existing.amount + amount
       existing.buyPrice = (existing.buyPrice * existing.amount + buyPrice * amount) / total
         existing.amount   = total
     } else {
-        state.holdings.push({ coinId: selected.id, symbol: selected.symbol,
-        name: selected.name, thumb: selected.thumb, amount, buyPrice })
+        state.holdings.push({
+        coinId:   selected.id,
+        symbol:   selected.symbol,
+        name:     selected.name,
+        thumb:    selected.thumb,
+        amount,
+        buyPrice,
+        })
     }
 
     if (!state.coins.includes(selected.id)) state.coins.push(selected.id)
@@ -271,10 +287,16 @@ function openAddAssetModal() {
     close()
     showToast(`${selected.symbol} agregado al portfolio`, 'success')
     await refreshPortfolio()
-    }
 
-    setTimeout(() => coinSearch.focus(), 50)
-}
+    } catch (err) {
+    // Restaurar botón si falla
+    saveBtn.textContent   = 'Agregar'
+    saveBtn.disabled      = false
+    saveBtn.style.opacity = '1'
+    errorEl.textContent   = 'Error al guardar. Intentá de nuevo.'
+    errorEl.style.display = 'block'
+    }
+}}
 
 // ------------------------------------------------------------
 //  Vista Dashboard
@@ -339,9 +361,6 @@ async function loadConverterView() {
 //  Vista Comparador
 // ------------------------------------------------------------
 async function loadComparatorView() {
-  // Mostrar placeholder inicial
-    showComparatorPlaceholder()
-
     const containerA = document.getElementById('comp-search-a')
     const containerB = document.getElementById('comp-search-b')
 
@@ -355,7 +374,7 @@ async function loadComparatorView() {
         updateCompPreview('a', coin)
         tryLoadComparison()
         }
-    })
+        })
     }
 
     if (containerB && !containerB.dataset.mounted) {
@@ -370,6 +389,34 @@ async function loadComparatorView() {
         }
     })
     }
+
+  // Si ya había coins seleccionadas, restaurar previews y gráfico
+    if (state.compCoinA) updateCompPreview('a', state.compCoinA)
+    if (state.compCoinB) updateCompPreview('b', state.compCoinB)
+
+    if (state.compCoinA && state.compCoinB) {
+    // Restaurar gráfico sin hacer fetch de nuevo
+    tryLoadComparison()
+    } else {
+    showComparatorPlaceholder()
+    }
+
+    function updateCompPreview(side, coin) {
+    const preview = document.getElementById(`comp-preview-${side}`)
+    if (!preview) return
+
+    preview.innerHTML = coin.thumb
+    ? `<img src="${coin.thumb}" alt="${coin.symbol}"
+            style="width:24px;height:24px;border-radius:50%;"/> 
+        <span>${coin.name} (${coin.symbol})</span>`
+    : `<span>${coin.name} (${coin.symbol})</span>`
+
+  // Restaurar texto en el input del buscador
+    const input = document.querySelector(`#comp-search-${side} .search-input`)
+    if (input && !input.value) {
+    input.value = `${coin.name} (${coin.symbol})`
+    }
+}
 }
 
 async function tryLoadComparison() {
